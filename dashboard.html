@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📊 French Postal Code Dashboard</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="leaflet.css"/>
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="leaflet.markercluster.css" />
+    <link rel="stylesheet" href="leaflet.markercluster.default.css" />
 
     <style>
         * {
@@ -185,36 +192,79 @@
         }
 
         .map-container {
-            position: relative;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            min-height: 400px;
-        }
-
-        .france-map {
+            height: 400px;
             width: 100%;
-            height: auto;
-            max-height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .department {
-            fill: #e0e0e0;
-            stroke: #333;
-            stroke-width: 0.5;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        #map {
+            height: 100%;
+            width: 100%;
         }
 
-        .department:hover {
-            stroke-width: 2;
-            stroke: #fff;
+        /* Custom marker styles */
+        .custom-marker {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
-        .department.highlighted {
-            fill: #ff6b6b !important;
-            stroke: #fff;
-            stroke-width: 2;
+        .marker-small { 
+            width: 15px; 
+            height: 15px; 
+        }
+        
+        .marker-medium { 
+            width: 25px; 
+            height: 25px; 
+        }
+        
+        .marker-large { 
+            width: 35px; 
+            height: 35px; 
+        }
+
+        .marker-highlighted {
+            border-color: #ff6b6b !important;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.6) !important;
+        }
+
+        /* Marker cluster styles */
+        .marker-cluster {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .marker-cluster-small {
+            width: 30px;
+            height: 30px;
+        }
+
+        .marker-cluster-medium {
+            width: 40px;
+            height: 40px;
+        }
+
+        .marker-cluster-large {
+            width: 50px;
+            height: 50px;
+        }
+
+        .marker-cluster div {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
 
         .tooltip {
@@ -379,66 +429,129 @@
             <div class="glass-panel">
                 <h2 style="color: white; margin-bottom: 20px; text-align: center;">🗺️ Carte de France</h2>
                 <div class="map-container">
-                    <svg class="france-map" id="franceMap" viewBox="0 0 800 600">
-                        <!-- Simplified France departments SVG with more realistic positioning -->
-                        <g id="departments">
-                            <!-- Île-de-France region -->
-                            <path class="department" d="M380,180 L420,180 L420,220 L380,220 Z" data-dept="75" data-name="Paris"></path>
-                            <path class="department" d="M340,160 L380,160 L380,200 L340,200 Z" data-dept="78" data-name="Yvelines"></path>
-                            <path class="department" d="M380,160 L420,160 L420,180 L380,180 Z" data-dept="95" data-name="Val-d'Oise"></path>
-                            <path class="department" d="M420,160 L460,160 L460,200 L420,200 Z" data-dept="77" data-name="Seine-et-Marne"></path>
-                            
-                            <!-- Rhône-Alpes region -->
-                            <path class="department" d="M480,320 L520,320 L520,360 L480,360 Z" data-dept="69" data-name="Rhône"></path>
-                            <path class="department" d="M520,300 L560,300 L560,340 L520,340 Z" data-dept="38" data-name="Isère"></path>
-                            <path class="department" d="M560,280 L600,280 L600,320 L560,320 Z" data-dept="73" data-name="Savoie"></path>
-                            <path class="department" d="M580,240 L620,240 L620,280 L580,280 Z" data-dept="74" data-name="Haute-Savoie"></path>
-                            
-                            <!-- PACA region -->
-                            <path class="department" d="M520,420 L580,420 L580,480 L520,480 Z" data-dept="13" data-name="Bouches-du-Rhône"></path>
-                            <path class="department" d="M580,400 L640,400 L640,460 L580,460 Z" data-dept="06" data-name="Alpes-Maritimes"></path>
-                            <path class="department" d="M480,440 L520,440 L520,480 L480,480 Z" data-dept="84" data-name="Vaucluse"></path>
-                            
-                            <!-- Aquitaine region -->
-                            <path class="department" d="M220,380 L280,380 L280,440 L220,440 Z" data-dept="33" data-name="Gironde"></path>
-                            <path class="department" d="M160,420 L220,420 L220,480 L160,480 Z" data-dept="40" data-name="Landes"></path>
-                            <path class="department" d="M220,440 L280,440 L280,500 L220,500 Z" data-dept="24" data-name="Dordogne"></path>
-                            
-                            <!-- Pays de la Loire region -->
-                            <path class="department" d="M260,240 L320,240 L320,300 L260,300 Z" data-dept="44" data-name="Loire-Atlantique"></path>
-                            <path class="department" d="M200,220 L260,220 L260,280 L200,280 Z" data-dept="85" data-name="Vendée"></path>
-                            <path class="department" d="M320,200 L380,200 L380,260 L320,260 Z" data-dept="49" data-name="Maine-et-Loire"></path>
-                            
-                            <!-- Nord-Pas-de-Calais region -->
-                            <path class="department" d="M340,60 L400,60 L400,120 L340,120 Z" data-dept="59" data-name="Nord"></path>
-                            <path class="department" d="M280,80 L340,80 L340,140 L280,140 Z" data-dept="62" data-name="Pas-de-Calais"></path>
-                            
-                            <!-- Languedoc-Roussillon region -->
-                            <path class="department" d="M360,440 L420,440 L420,500 L360,500 Z" data-dept="34" data-name="Hérault"></path>
-                            <path class="department" d="M300,460 L360,460 L360,520 L300,520 Z" data-dept="11" data-name="Aude"></path>
-                            <path class="department" d="M260,480 L320,480 L320,540 L260,540 Z" data-dept="66" data-name="Pyrénées-Orientales"></path>
-                            
-                            <!-- Midi-Pyrénées region -->
-                            <path class="department" d="M320,360 L380,360 L380,420 L320,420 Z" data-dept="31" data-name="Haute-Garonne"></path>
-                            <path class="department" d="M280,340 L340,340 L340,400 L280,400 Z" data-dept="32" data-name="Gers"></path>
-                            
-                            <!-- Other major departments -->
-                            <path class="department" d="M440,240 L500,240 L500,300 L440,300 Z" data-dept="21" data-name="Côte-d'Or"></path>
-                            <path class="department" d="M400,280 L460,280 L460,340 L400,340 Z" data-dept="42" data-name="Loire"></path>
-                            <path class="department" d="M340,120 L400,120 L400,180 L340,180 Z" data-dept="02" data-name="Aisne"></path>
-                            <path class="department" d="M400,120 L460,120 L460,180 L400,180 Z" data-dept="51" data-name="Marne"></path>
-                            <path class="department" d="M460,180 L520,180 L520,240 L460,240 Z" data-dept="54" data-name="Meurthe-et-Moselle"></path>
-                            <path class="department" d="M520,160 L580,160 L580,220 L520,220 Z" data-dept="67" data-name="Bas-Rhin"></path>
-                            <path class="department" d="M540,220 L600,220 L600,280 L540,280 Z" data-dept="68" data-name="Haut-Rhin"></path>
-                        </g>
-                    </svg>
-                    <div class="tooltip" id="tooltip"></div>
+                    <div id="map"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Leaflet JavaScript -->
+    <script src="leaflet.js"></script>
+    
+    <!-- Leaflet MarkerCluster JavaScript -->
+    <script src="leaflet.markercluster.js"></script>
+
     <script>
+        // Postal code coordinates for major French cities (simplified dataset)
+        const postalCodeCoordinates = {
+            '75001': [48.8606, 2.3376], // Paris 1er
+            '75002': [48.8679, 2.3424], // Paris 2e
+            '75003': [48.8630, 2.3563], // Paris 3e
+            '75004': [48.8551, 2.3594], // Paris 4e
+            '75005': [48.8445, 2.3475], // Paris 5e
+            '75006': [48.8462, 2.3372], // Paris 6e
+            '75007': [48.8566, 2.3122], // Paris 7e
+            '75008': [48.8725, 2.3107], // Paris 8e
+            '75009': [48.8755, 2.3394], // Paris 9e
+            '75010': [48.8760, 2.3591], // Paris 10e
+            '75011': [48.8594, 2.3760], // Paris 11e
+            '75012': [48.8448, 2.3747], // Paris 12e
+            '75013': [48.8322, 2.3606], // Paris 13e
+            '75014': [48.8244, 2.3266], // Paris 14e
+            '75015': [48.8422, 2.2991], // Paris 15e
+            '75016': [48.8517, 2.2687], // Paris 16e
+            '75017': [48.8868, 2.3037], // Paris 17e
+            '75018': [48.8927, 2.3436], // Paris 18e
+            '75019': [48.8837, 2.3678], // Paris 19e
+            '75020': [48.8631, 2.3969], // Paris 20e
+            '13001': [43.2965, 2.3708], // Marseille 1er
+            '13002': [43.3031, 2.3655], // Marseille 2e
+            '13003': [43.3059, 2.3726], // Marseille 3e
+            '13004': [43.3063, 2.3826], // Marseille 4e
+            '13005': [43.2955, 2.3864], // Marseille 5e
+            '13006': [43.2886, 2.3789], // Marseille 6e
+            '13007': [43.2843, 2.3584], // Marseille 7e
+            '13008': [43.2722, 2.3885], // Marseille 8e
+            '13009': [43.2536, 2.4130], // Marseille 9e
+            '13010': [43.2793, 2.4026], // Marseille 10e
+            '13011': [43.2891, 2.4186], // Marseille 11e
+            '13012': [43.3043, 2.4014], // Marseille 12e
+            '13013': [43.3330, 2.3941], // Marseille 13e
+            '13014': [43.3371, 2.3618], // Marseille 14e
+            '13015': [43.3581, 2.3652], // Marseille 15e
+            '13016': [43.3555, 2.3232], // Marseille 16e
+            '69001': [45.7675, 4.8351], // Lyon 1er
+            '69002': [45.7576, 4.8320], // Lyon 2e
+            '69003': [45.7578, 4.8441], // Lyon 3e
+            '69004': [45.7758, 4.8264], // Lyon 4e
+            '69005': [45.7597, 4.8083], // Lyon 5e
+            '69006': [45.7695, 4.8467], // Lyon 6e
+            '69007': [45.7345, 4.8418], // Lyon 7e
+            '69008': [45.7373, 4.8695], // Lyon 8e
+            '69009': [45.7798, 4.8049], // Lyon 9e
+            '31000': [43.6047, 1.4442], // Toulouse
+            '31100': [43.6047, 1.4442], // Toulouse
+            '31200': [43.6047, 1.4442], // Toulouse
+            '31300': [43.6047, 1.4442], // Toulouse
+            '31400': [43.6047, 1.4442], // Toulouse
+            '31500': [43.6047, 1.4442], // Toulouse
+            '33000': [44.8378, -0.5792], // Bordeaux
+            '33100': [44.8378, -0.5792], // Bordeaux
+            '33200': [44.8378, -0.5792], // Bordeaux
+            '33300': [44.8378, -0.5792], // Bordeaux
+            '33800': [44.8378, -0.5792], // Bordeaux
+            '34000': [43.6110, 3.8767], // Montpellier
+            '34070': [43.6110, 3.8767], // Montpellier
+            '34080': [43.6110, 3.8767], // Montpellier
+            '34090': [43.6110, 3.8767], // Montpellier
+            '35000': [48.1173, -1.6778], // Rennes
+            '35200': [48.1173, -1.6778], // Rennes
+            '35700': [48.1173, -1.6778], // Rennes
+            '37000': [47.3941, 0.6848], // Tours
+            '37100': [47.3941, 0.6848], // Tours
+            '37200': [47.3941, 0.6848], // Tours
+            '38000': [45.1885, 5.7245], // Grenoble
+            '38100': [45.1885, 5.7245], // Grenoble
+            '38700': [45.1885, 5.7245], // Grenoble
+            '44000': [47.2184, -1.5536], // Nantes
+            '44100': [47.2184, -1.5536], // Nantes
+            '44200': [47.2184, -1.5536], // Nantes
+            '44300': [47.2184, -1.5536], // Nantes
+            '59000': [50.6292, 3.0573], // Lille
+            '59260': [50.6292, 3.0573], // Lille
+            '59777': [50.6292, 3.0573], // Lille
+            '59800': [50.6292, 3.0573], // Lille
+            '67000': [48.5734, 7.7521], // Strasbourg
+            '67100': [48.5734, 7.7521], // Strasbourg
+            '67200': [48.5734, 7.7521], // Strasbourg
+            '06000': [43.7102, 7.2620], // Nice
+            '06100': [43.7102, 7.2620], // Nice
+            '06200': [43.7102, 7.2620], // Nice
+            '06300': [43.7102, 7.2620], // Nice
+            '25000': [47.2380, 6.0240], // Besançon
+            '21000': [47.3220, 5.0415], // Dijon
+            '42000': [45.4397, 4.3872], // Saint-Étienne
+            '76000': [49.4431, 1.0993], // Rouen
+            '80000': [49.8942, 2.2957], // Amiens
+            '62000': [50.2929, 2.7767], // Arras
+            '51000': [49.2583, 4.0317], // Châlons-en-Champagne
+            '54000': [48.6921, 6.1844], // Nancy
+            '57000': [49.1193, 6.1757], // Metz
+            '68000': [47.7516, 7.3353], // Colmar
+            '25000': [47.2380, 6.0240], // Besançon
+            '39000': [46.6725, 5.5649], // Lons-le-Saunier
+            '70000': [47.6219, 6.1581], // Vesoul
+            '90000': [47.6380, 6.8628], // Belfort
+        };
+
+        // Initialize global variables
+        let postalData = [];
+        let filteredData = [];
+        let map = null;
+        let markersCluster = null;
+        let markers = new Map();
+        let highlightedMarker = null;
+
         // Simple CSV parser to replace PapaParse
         function parseCSV(csvText) {
             const lines = csvText.trim().split('\n');
@@ -471,8 +584,67 @@
             return { data, errors };
         }
 
-        let postalData = [];
-        let filteredData = [];
+        // Initialize Leaflet map
+        function initializeMap() {
+            // Create map centered on France
+            map = L.map('map').setView([46.603354, 1.888334], 6);
+
+            // Try different tile sources - some might not be blocked
+            // Use a simple gray tile for offline capability if all external sources fail
+            try {
+                // Try OpenStreetMap first
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18,
+                    errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2Y4ZjlmYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Y2EzYWYiPk1hcA==</text></svg>'
+                }).addTo(map);
+            } catch (e) {
+                console.log('External tiles blocked, using offline fallback');
+                // Create a simple gray background as fallback
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#f8f9fa';
+                ctx.fillRect(0, 0, 256, 256);
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Map', 128, 128);
+                
+                const dataUrl = canvas.toDataURL();
+                
+                L.tileLayer(dataUrl, {
+                    attribution: 'Offline Map',
+                    maxZoom: 18
+                }).addTo(map);
+            }
+
+            // Initialize marker cluster group
+            markersCluster = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    let className = 'marker-cluster-small';
+                    if (count > 10) className = 'marker-cluster-medium';
+                    if (count > 50) className = 'marker-cluster-large';
+                    
+                    return new L.DivIcon({
+                        html: '<div><span>' + count + '</span></div>',
+                        className: 'marker-cluster ' + className,
+                        iconSize: new L.Point(40, 40)
+                    });
+                }
+            });
+
+            map.addLayer(markersCluster);
+        }
+
+        // Initialize map when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+        });
 
         // File upload handling
         const uploadArea = document.getElementById('uploadArea');
@@ -653,41 +825,203 @@
         }
 
         function updateMap() {
-            // Calculate department intensities
-            const deptData = {};
-            filteredData.forEach(item => {
-                if (!deptData[item.department]) {
-                    deptData[item.department] = 0;
-                }
-                deptData[item.department] += item.count;
-            });
+            // Clear existing markers
+            markersCluster.clearLayers();
+            markers.clear();
 
-            const maxCount = Math.max(...Object.values(deptData));
-            
-            // Update department colors based on data intensity
-            document.querySelectorAll('.department').forEach(dept => {
-                const deptCode = dept.getAttribute('data-dept');
-                const count = deptData[deptCode] || 0;
-                const intensity = count / maxCount;
-                
-                // Color scale from light blue to dark blue
-                const blue = Math.floor(50 + intensity * 150);
-                dept.style.fill = `rgb(102, 126, ${blue})`;
+            if (filteredData.length === 0) return;
+
+            // Calculate intensity scale
+            const maxCount = Math.max(...filteredData.map(item => item.count));
+            const minCount = Math.min(...filteredData.map(item => item.count));
+
+            // Add markers for each postal code
+            filteredData.forEach(item => {
+                const coords = postalCodeCoordinates[item.postalCode];
+                if (!coords) {
+                    // For postal codes without specific coordinates, approximate based on department
+                    const deptCode = item.department;
+                    const deptCoords = getDepartmentCenter(deptCode);
+                    if (deptCoords) {
+                        addMarkerToMap(item, deptCoords, maxCount, minCount);
+                    }
+                } else {
+                    addMarkerToMap(item, coords, maxCount, minCount);
+                }
             });
         }
 
-        function highlightPostalCode(postalCode) {
-            const department = postalCode.substring(0, 2);
+        function addMarkerToMap(item, coords, maxCount, minCount) {
+            // Calculate marker size and color based on employee count
+            const intensity = (item.count - minCount) / (maxCount - minCount);
             
-            // Remove previous highlights
-            document.querySelectorAll('.department').forEach(dept => {
-                dept.classList.remove('highlighted');
+            // Determine marker size
+            let markerSize;
+            if (intensity < 0.33) markerSize = 'small';
+            else if (intensity < 0.66) markerSize = 'medium';
+            else markerSize = 'large';
+
+            // Create custom marker icon
+            const markerHtml = `<div class="custom-marker marker-${markerSize}" style="background: hsl(${240 + intensity * 60}, 70%, ${50 + intensity * 20}%);"></div>`;
+            
+            const customIcon = L.divIcon({
+                html: markerHtml,
+                className: 'custom-div-icon',
+                iconSize: markerSize === 'small' ? [15, 15] : markerSize === 'medium' ? [25, 25] : [35, 35],
+                iconAnchor: markerSize === 'small' ? [7, 7] : markerSize === 'medium' ? [12, 12] : [17, 17]
             });
+
+            // Create marker
+            const marker = L.marker(coords, { icon: customIcon });
             
-            // Highlight the department
-            const deptElement = document.querySelector(`[data-dept="${department}"]`);
-            if (deptElement) {
-                deptElement.classList.add('highlighted');
+            // Add popup with postal code information
+            marker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>Code Postal: ${item.postalCode}</strong><br>
+                    <strong>Département: ${item.department}</strong><br>
+                    <strong>Employés: ${item.count.toLocaleString()}</strong>
+                </div>
+            `);
+
+            // Store marker reference
+            markers.set(item.postalCode, marker);
+            
+            // Add to cluster group
+            markersCluster.addLayer(marker);
+        }
+
+        function getDepartmentCenter(deptCode) {
+            // Approximate centers for French departments (simplified)
+            const deptCenters = {
+                '01': [46.2044, 5.2281], // Ain
+                '02': [49.4431, 3.3939], // Aisne
+                '03': [46.3434, 3.4171], // Allier
+                '04': [44.2619, 6.2371], // Alpes-de-Haute-Provence
+                '05': [44.6570, 6.0802], // Hautes-Alpes
+                '06': [43.7102, 7.2620], // Alpes-Maritimes
+                '07': [44.7357, 4.3734], // Ardèche
+                '08': [49.7344, 4.7221], // Ardennes
+                '09': [42.9636, 1.6027], // Ariège
+                '10': [48.2973, 4.0781], // Aube
+                '11': [43.0504, 2.3522], // Aude
+                '12': [44.3518, 2.5684], // Aveyron
+                '13': [43.5297, 5.4474], // Bouches-du-Rhône
+                '14': [49.1829, -0.3707], // Calvados
+                '15': [45.0357, 2.4441], // Cantal
+                '16': [45.6978, 0.1576], // Charente
+                '17': [45.7485, -0.6365], // Charente-Maritime
+                '18': [47.0810, 2.3987], // Cher
+                '19': [45.2669, 1.7706], // Corrèze
+                '21': [47.3220, 5.0415], // Côte-d'Or
+                '22': [48.4569, -2.7574], // Côtes-d'Armor
+                '23': [46.1717, 2.1214], // Creuse
+                '24': [45.1851, 0.7213], // Dordogne
+                '25': [47.2380, 6.0240], // Doubs
+                '26': [44.7338, 4.8927], // Drôme
+                '27': [49.0262, 0.8906], // Eure
+                '28': [48.4469, 1.4884], // Eure-et-Loir
+                '29': [48.2020, -4.2649], // Finistère
+                '30': [43.8376, 4.3601], // Gard
+                '31': [43.6047, 1.4442], // Haute-Garonne
+                '32': [43.6467, 0.5861], // Gers
+                '33': [44.8378, -0.5792], // Gironde
+                '34': [43.6110, 3.8767], // Hérault
+                '35': [48.1173, -1.6778], // Ille-et-Vilaine
+                '36': [46.8076, 1.6906], // Indre
+                '37': [47.3941, 0.6848], // Indre-et-Loire
+                '38': [45.1885, 5.7245], // Isère
+                '39': [46.6725, 5.5649], // Jura
+                '40': [44.0154, -0.7454], // Landes
+                '41': [47.7515, 1.3052], // Loir-et-Cher
+                '42': [45.4397, 4.3872], // Loire
+                '43': [45.0430, 3.8845], // Haute-Loire
+                '44': [47.2184, -1.5536], // Loire-Atlantique
+                '45': [47.9029, 2.1781], // Loiret
+                '46': [44.4477, 1.4411], // Lot
+                '47': [44.3106, 0.7541], // Lot-et-Garonne
+                '48': [44.5176, 3.5016], // Lozère
+                '49': [47.4739, -0.5515], // Maine-et-Loire
+                '50': [49.1159, -1.3086], // Manche
+                '51': [49.2583, 4.0317], // Marne
+                '52': [48.1133, 5.1379], // Haute-Marne
+                '53': [48.0679, -0.7702], // Mayenne
+                '54': [48.6921, 6.1844], // Meurthe-et-Moselle
+                '55': [49.1610, 5.3877], // Meuse
+                '56': [47.7483, -2.7591], // Morbihan
+                '57': [49.1193, 6.1757], // Moselle
+                '58': [47.2610, 3.5311], // Nièvre
+                '59': [50.6292, 3.0573], // Nord
+                '60': [49.4144, 2.8215], // Oise
+                '61': [48.6200, 0.1581], // Orne
+                '62': [50.2929, 2.7767], // Pas-de-Calais
+                '63': [45.7772, 3.0870], // Puy-de-Dôme
+                '64': [43.2951, -0.3707], // Pyrénées-Atlantiques
+                '65': [43.2329, 0.0785], // Hautes-Pyrénées
+                '66': [42.6886, 2.8946], // Pyrénées-Orientales
+                '67': [48.5734, 7.7521], // Bas-Rhin
+                '68': [47.7516, 7.3353], // Haut-Rhin
+                '69': [45.7675, 4.8351], // Rhône
+                '70': [47.6219, 6.1581], // Haute-Saône
+                '71': [46.7814, 4.8578], // Saône-et-Loire
+                '72': [48.0077, 0.1996], // Sarthe
+                '73': [45.5646, 6.3223], // Savoie
+                '74': [46.0763, 6.4473], // Haute-Savoie
+                '75': [48.8566, 2.3522], // Paris
+                '76': [49.4431, 1.0993], // Seine-Maritime
+                '77': [48.8566, 2.8522], // Seine-et-Marne
+                '78': [48.8566, 2.1522], // Yvelines
+                '79': [46.3230, -0.4595], // Deux-Sèvres
+                '80': [49.8942, 2.2957], // Somme
+                '81': [43.9297, 2.1489], // Tarn
+                '82': [44.0151, 1.3554], // Tarn-et-Garonne
+                '83': [43.4742, 6.2388], // Var
+                '84': [44.0394, 5.0479], // Vaucluse
+                '85': [46.6708, -1.4266], // Vendée
+                '86': [46.5802, 0.3404], // Vienne
+                '87': [45.8336, 1.2611], // Haute-Vienne
+                '88': [48.1716, 6.4518], // Vosges
+                '89': [47.7982, 3.5731], // Yonne
+                '90': [47.6380, 6.8628], // Territoire de Belfort
+                '91': [48.6319, 2.4392], // Essonne
+                '92': [48.8566, 2.2400], // Hauts-de-Seine
+                '93': [48.9356, 2.4539], // Seine-Saint-Denis
+                '94': [48.7851, 2.4637], // Val-de-Marne
+                '95': [49.0501, 2.2014]  // Val-d'Oise
+            };
+            
+            return deptCenters[deptCode] || null;
+        }
+
+        function highlightPostalCode(postalCode) {
+            // Remove previous highlight
+            if (highlightedMarker) {
+                const markerElement = highlightedMarker._icon;
+                if (markerElement) {
+                    const markerDiv = markerElement.querySelector('.custom-marker');
+                    if (markerDiv) {
+                        markerDiv.classList.remove('marker-highlighted');
+                    }
+                }
+                highlightedMarker = null;
+            }
+
+            // Highlight the new marker
+            const marker = markers.get(postalCode);
+            if (marker) {
+                const markerElement = marker._icon;
+                if (markerElement) {
+                    const markerDiv = markerElement.querySelector('.custom-marker');
+                    if (markerDiv) {
+                        markerDiv.classList.add('marker-highlighted');
+                        highlightedMarker = marker;
+                        
+                        // Center map on the highlighted marker
+                        map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
+                        
+                        // Open popup
+                        marker.openPopup();
+                    }
+                }
             }
         }
 
@@ -704,36 +1038,6 @@
             }
             
             updateDashboard();
-        });
-
-        // Tooltip functionality
-        const tooltip = document.getElementById('tooltip');
-
-        document.querySelectorAll('.department').forEach(dept => {
-            dept.addEventListener('mouseenter', (e) => {
-                const deptName = dept.getAttribute('data-name');
-                const deptCode = dept.getAttribute('data-dept');
-                
-                // Calculate department data
-                const deptEmployees = filteredData
-                    .filter(item => item.department === deptCode)
-                    .reduce((sum, item) => sum + item.count, 0);
-                
-                tooltip.innerHTML = `
-                    <strong>${deptName} (${deptCode})</strong><br>
-                    Employés: ${deptEmployees.toLocaleString()}
-                `;
-                tooltip.style.display = 'block';
-            });
-
-            dept.addEventListener('mousemove', (e) => {
-                tooltip.style.left = e.pageX + 10 + 'px';
-                tooltip.style.top = e.pageY + 10 + 'px';
-            });
-
-            dept.addEventListener('mouseleave', () => {
-                tooltip.style.display = 'none';
-            });
         });
     </script>
 </body>
