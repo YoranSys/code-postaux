@@ -35,8 +35,27 @@ Your CSV file must contain at least two columns:
 - `matricule`
 - `total`
 
-### Example CSV Format
+**For Commune (optional, but recommended for precision):**
+- `Commune` (recommended)
+- `commune`
+- `ville`
+- `city`
+- `municipality`
 
+### Example CSV Formats
+
+**Format 1: With commune information (recommended)**
+```csv
+Code Postaux,Commune,Count de Matricule Ouvrant-droit
+75001,Paris 1er Arrondissement,45
+75002,Paris 2e Arrondissement,32
+69001,Lyon 1er Arrondissement,89
+13001,Marseille 1er Arrondissement,123
+54490,Piennes,25
+54490,Cons-la-Grandville,18
+```
+
+**Format 2: Standard (postal code only)**
 ```csv
 Code Postaux,Count de Matricule Ouvrant-droit
 75001,45

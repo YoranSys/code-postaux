@@ -978,9 +978,11 @@
             
             const postalCodeColumns = ['Code Postaux', 'CP', 'postal', 'code'];
             const countColumns = ['Count de Matricule Ouvrant-droit', 'Count', 'nombre', 'matricule', 'total'];
+            const communeColumns = ['Commune', 'commune', 'ville', 'city', 'municipality'];
             
             let postalCodeCol = null;
             let countCol = null;
+            let communeCol = null;
 
             // Find matching columns
             for (const header of headers) {
@@ -989,6 +991,9 @@
                 }
                 if (countColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
                     countCol = header;
+                }
+                if (communeColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                    communeCol = header;
                 }
             }
 
@@ -1000,6 +1005,7 @@
             // Process and validate data
             postalData = data.map(row => ({
                 postalCode: row[postalCodeCol],
+                commune: communeCol ? row[communeCol] : null,
                 count: parseInt(row[countCol]) || 0,
                 department: row[postalCodeCol] ? row[postalCodeCol].substring(0, 2) : ''
             })).filter(item => {
@@ -1015,7 +1021,9 @@
             }
 
             filteredData = [...postalData];
-            showMessage(`✅ ${postalData.length} codes postaux chargés avec succès!`, 'success');
+            const communeCount = postalData.filter(item => item.commune).length;
+            const communeMsg = communeCol ? ` (${communeCount} avec communes)` : '';
+            showMessage(`✅ ${postalData.length} codes postaux chargés avec succès${communeMsg}!`, 'success');
             
             // Show dashboard
             document.getElementById('uploadSection').style.display = 'none';
@@ -1166,11 +1174,22 @@
                     communes.forEach(commune => {
                         if (commune.codesPostaux && commune.centre) {
                             commune.codesPostaux.forEach(postalCode => {
+                                // Store by postal code only (for backward compatibility)
                                 postalCodeDatabase.set(postalCode, {
                                     lat: commune.centre.coordinates[1],
                                     lng: commune.centre.coordinates[0],
                                     commune: commune.nom,
                                     department: dept
+                                });
+                                
+                                // Also store by postal code + commune combination for precise matching
+                                const preciseKey = `${postalCode}_${commune.nom.toLowerCase().trim()}`;
+                                postalCodeDatabase.set(preciseKey, {
+                                    lat: commune.centre.coordinates[1],
+                                    lng: commune.centre.coordinates[0],
+                                    commune: commune.nom,
+                                    department: dept,
+                                    precise: true
                                 });
                             });
                         }
@@ -1196,11 +1215,23 @@
 
             // Add markers for each postal code
             filteredData.forEach(item => {
-                const geocodedData = postalCodeDatabase.get(item.postalCode);
+                let geocodedData = null;
+                
+                // First, try precise matching with commune if available
+                if (item.commune) {
+                    const preciseKey = `${item.postalCode}_${item.commune.toLowerCase().trim()}`;
+                    geocodedData = postalCodeDatabase.get(preciseKey);
+                }
+                
+                // Fallback to postal code only matching
+                if (!geocodedData) {
+                    geocodedData = postalCodeDatabase.get(item.postalCode);
+                }
                 
                 if (geocodedData && geocodedData.lat && geocodedData.lng) {
                     // Use geocoded coordinates
-                    addMarkerToMap(item, [geocodedData.lat, geocodedData.lng], maxCount, minCount, geocodedData.commune);
+                    const displayCommune = item.commune || geocodedData.commune;
+                    addMarkerToMap(item, [geocodedData.lat, geocodedData.lng], maxCount, minCount, displayCommune);
                 } else {
                     // Fallback to static coordinates or department center
                     const coords = postalCodeCoordinates[item.postalCode];
