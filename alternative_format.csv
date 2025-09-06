@@ -1,0 +1,22 @@
+# Alternative CSV formats for testing
+
+## Format 1 (Alternative column names)
+CP,Count
+75001,45
+75002,32
+69001,89
+13001,123
+
+## Format 2 (Generic column names)  
+postal,total
+75001,45
+75002,32
+69001,89
+13001,123
+
+## Format 3 (Different names)
+code,nombre
+75001,45
+75002,32
+69001,89
+13001,123

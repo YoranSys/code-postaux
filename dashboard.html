@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 French Postal Code Dashboard</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="leaflet.css"/>
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="leaflet.markercluster.css" />
+    <link rel="stylesheet" href="leaflet.markercluster.default.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .upload-area {
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .upload-text {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .dashboard {
+            display: none;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .dashboard.active {
+            display: grid;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .search-container {
+            margin: 20px 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            background: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .top-codes {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .code-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .code-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Custom marker styles */
+        .custom-marker {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .marker-small { 
+            width: 15px; 
+            height: 15px; 
+        }
+        
+        .marker-medium { 
+            width: 25px; 
+            height: 25px; 
+        }
+        
+        .marker-large { 
+            width: 35px; 
+            height: 35px; 
+        }
+
+        .marker-highlighted {
+            border-color: #ff6b6b !important;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.6) !important;
+        }
+
+        /* Marker cluster styles with enhanced sizing */
+        .marker-cluster {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .marker-cluster-small {
+            width: 35px;
+            height: 35px;
+            font-size: 11px;
+        }
+
+        .marker-cluster-medium {
+            width: 50px;
+            height: 50px;
+            font-size: 13px;
+        }
+
+        .marker-cluster-large {
+            width: 65px;
+            height: 65px;
+            font-size: 15px;
+        }
+
+        .marker-cluster-xlarge {
+            width: 85px;
+            height: 85px;
+            font-size: 17px;
+            border-width: 4px;
+        }
+
+        .marker-cluster div {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 0.9rem;
+            z-index: 1000;
+            display: none;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+
+        .chart-title {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bar-label {
+            color: white;
+            font-size: 0.9rem;
+            min-width: 60px;
+        }
+
+        .bar {
+            height: 20px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover {
+            transform: scaleY(1.2);
+        }
+
+        .bar-value {
+            color: white;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .success-message {
+            background: rgba(0, 255, 0, 0.1);
+            color: #4CAF50;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        /* Toggle Switch Styles */
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .map-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fullscreen-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .fullscreen-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Fullscreen styles */
+        .map-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 10000 !important;
+            background: white !important;
+            border-radius: 0 !important;
+        }
+
+        .map-fullscreen .map-container {
+            height: calc(100vh - 80px) !important;
+            border-radius: 0 !important;
+        }
+
+        .map-fullscreen .map-header {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .toggle-input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            transition: background 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .toggle-input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+
+        .toggle-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            min-width: 80px;
+        }
+
+        .toggle-dept {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .toggle-postal {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .toggle-input:not(:checked) ~ .toggle-text .toggle-dept {
+            opacity: 1;
+            font-weight: bold;
+        }
+
+        .toggle-input:checked ~ .toggle-text .toggle-postal {
+            opacity: 1;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+        }
+
+        /* Custom marker styles */
+        .custom-marker {
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.2);
+        }
+
+        .marker-highlighted {
+            border-color: #ff0000 !important;
+            border-width: 3px !important;
+            animation: pulse 2s infinite;
+        }
+
+        .department-marker {
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .department-marker:hover {
+            transform: scale(1.1);
+        }
+
+        .marker-count {
+            font-size: 0.8em;
+            line-height: 1;
+        }
+
+        .marker-dept {
+            font-size: 0.6em;
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        .marker-xlarge .marker-count {
+            font-size: 1em;
+        }
+
+        .marker-xlarge .marker-dept {
+            font-size: 0.7em;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">📊 French Postal Code Dashboard</h1>
+        
+        <!-- Upload Section -->
+        <div class="glass-panel" id="uploadSection">
+            <div class="upload-area" id="uploadArea">
+                <span class="upload-icon">📂</span>
+                <div class="upload-text">Glissez-déposez votre fichier CSV ici</div>
+                <div class="upload-text">ou</div>
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    📂 Choisir un fichier CSV
+                </button>
+                <input type="file" id="fileInput" accept=".csv" />
+            </div>
+            <div id="messageContainer"></div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="dashboard" id="dashboard">
+            <!-- Left Panel -->
+            <div>
+                <!-- Statistics -->
+                <div class="glass-panel">
+                    <h2 style="color: white; margin-bottom: 20px; text-align: center;">📊 Statistiques</h2>
+                    <div class="stats-panel">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalCodes">0</div>
+                            <div class="stat-label">Codes Postaux</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalEmployees">0</div>
+                            <div class="stat-label">Total Employés</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="averagePerCode">0</div>
+                            <div class="stat-label">Moyenne par Code</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="maxValue">0</div>
+                            <div class="stat-label">Maximum</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Top Codes -->
+                <div class="glass-panel">
+                    <h2 style="color: white; margin-bottom: 15px; text-align: center;">🔍 Recherche & Top 10</h2>
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="searchInput" placeholder="Rechercher un code postal...">
+                    </div>
+                    <div class="top-codes" id="topCodes"></div>
+                </div>
+
+                <!-- Bar Chart -->
+                <div class="glass-panel">
+                    <div class="chart-container">
+                        <div class="chart-title">📊 Top 15 Départements</div>
+                        <div class="bar-chart" id="barChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Map -->
+            <div class="glass-panel">
+                <div class="map-header">
+                    <h2 style="color: white; text-align: center;">🗺️ Carte de France</h2>
+                    <div class="map-controls">
+                        <button class="fullscreen-btn" onclick="toggleFullscreen()">
+                            🔍 Plein écran
+                        </button>
+                        <div class="toggle-switch">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="viewToggle" class="toggle-input" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-text">
+                                    <span class="toggle-dept">Départements</span>
+                                    <span class="toggle-postal">Codes Postaux</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="leaflet.js"></script>
+    
+    <!-- Leaflet MarkerCluster JavaScript -->
+    <script src="leaflet.markercluster.js"></script>
+
+    <script>
+        // Postal code coordinates for major French cities (simplified dataset)
+        const postalCodeCoordinates = {
+            '75001': [48.8606, 2.3376], // Paris 1er
+            '75002': [48.8679, 2.3424], // Paris 2e
+            '75003': [48.8630, 2.3563], // Paris 3e
+            '75004': [48.8551, 2.3594], // Paris 4e
+            '75005': [48.8445, 2.3475], // Paris 5e
+            '75006': [48.8462, 2.3372], // Paris 6e
+            '75007': [48.8566, 2.3122], // Paris 7e
+            '75008': [48.8725, 2.3107], // Paris 8e
+            '75009': [48.8755, 2.3394], // Paris 9e
+            '75010': [48.8760, 2.3591], // Paris 10e
+            '75011': [48.8594, 2.3760], // Paris 11e
+            '75012': [48.8448, 2.3747], // Paris 12e
+            '75013': [48.8322, 2.3606], // Paris 13e
+            '75014': [48.8244, 2.3266], // Paris 14e
+            '75015': [48.8422, 2.2991], // Paris 15e
+            '75016': [48.8517, 2.2687], // Paris 16e
+            '75017': [48.8868, 2.3037], // Paris 17e
+            '75018': [48.8927, 2.3436], // Paris 18e
+            '75019': [48.8837, 2.3678], // Paris 19e
+            '75020': [48.8631, 2.3969], // Paris 20e
+            '13001': [43.2965, 2.3708], // Marseille 1er
+            '13002': [43.3031, 2.3655], // Marseille 2e
+            '13003': [43.3059, 2.3726], // Marseille 3e
+            '13004': [43.3063, 2.3826], // Marseille 4e
+            '13005': [43.2955, 2.3864], // Marseille 5e
+            '13006': [43.2886, 2.3789], // Marseille 6e
+            '13007': [43.2843, 2.3584], // Marseille 7e
+            '13008': [43.2722, 2.3885], // Marseille 8e
+            '13009': [43.2536, 2.4130], // Marseille 9e
+            '13010': [43.2793, 2.4026], // Marseille 10e
+            '13011': [43.2891, 2.4186], // Marseille 11e
+            '13012': [43.3043, 2.4014], // Marseille 12e
+            '13013': [43.3330, 2.3941], // Marseille 13e
+            '13014': [43.3371, 2.3618], // Marseille 14e
+            '13015': [43.3581, 2.3652], // Marseille 15e
+            '13016': [43.3555, 2.3232], // Marseille 16e
+            '69001': [45.7675, 4.8351], // Lyon 1er
+            '69002': [45.7576, 4.8320], // Lyon 2e
+            '69003': [45.7578, 4.8441], // Lyon 3e
+            '69004': [45.7758, 4.8264], // Lyon 4e
+            '69005': [45.7597, 4.8083], // Lyon 5e
+            '69006': [45.7695, 4.8467], // Lyon 6e
+            '69007': [45.7345, 4.8418], // Lyon 7e
+            '69008': [45.7373, 4.8695], // Lyon 8e
+            '69009': [45.7798, 4.8049], // Lyon 9e
+            '31000': [43.6047, 1.4442], // Toulouse
+            '31100': [43.6047, 1.4442], // Toulouse
+            '31200': [43.6047, 1.4442], // Toulouse
+            '31300': [43.6047, 1.4442], // Toulouse
+            '31400': [43.6047, 1.4442], // Toulouse
+            '31500': [43.6047, 1.4442], // Toulouse
+            '33000': [44.8378, -0.5792], // Bordeaux
+            '33100': [44.8378, -0.5792], // Bordeaux
+            '33200': [44.8378, -0.5792], // Bordeaux
+            '33300': [44.8378, -0.5792], // Bordeaux
+            '33800': [44.8378, -0.5792], // Bordeaux
+            '34000': [43.6110, 3.8767], // Montpellier
+            '34070': [43.6110, 3.8767], // Montpellier
+            '34080': [43.6110, 3.8767], // Montpellier
+            '34090': [43.6110, 3.8767], // Montpellier
+            '35000': [48.1173, -1.6778], // Rennes
+            '35200': [48.1173, -1.6778], // Rennes
+            '35700': [48.1173, -1.6778], // Rennes
+            '37000': [47.3941, 0.6848], // Tours
+            '37100': [47.3941, 0.6848], // Tours
+            '37200': [47.3941, 0.6848], // Tours
+            '38000': [45.1885, 5.7245], // Grenoble
+            '38100': [45.1885, 5.7245], // Grenoble
+            '38700': [45.1885, 5.7245], // Grenoble
+            '44000': [47.2184, -1.5536], // Nantes
+            '44100': [47.2184, -1.5536], // Nantes
+            '44200': [47.2184, -1.5536], // Nantes
+            '44300': [47.2184, -1.5536], // Nantes
+            '59000': [50.6292, 3.0573], // Lille
+            '59260': [50.6292, 3.0573], // Lille
+            '59777': [50.6292, 3.0573], // Lille
+            '59800': [50.6292, 3.0573], // Lille
+            '67000': [48.5734, 7.7521], // Strasbourg
+            '67100': [48.5734, 7.7521], // Strasbourg
+            '67200': [48.5734, 7.7521], // Strasbourg
+            '06000': [43.7102, 7.2620], // Nice
+            '06100': [43.7102, 7.2620], // Nice
+            '06200': [43.7102, 7.2620], // Nice
+            '06300': [43.7102, 7.2620], // Nice
+            '25000': [47.2380, 6.0240], // Besançon
+            '21000': [47.3220, 5.0415], // Dijon
+            '42000': [45.4397, 4.3872], // Saint-Étienne
+            '76000': [49.4431, 1.0993], // Rouen
+            '80000': [49.8942, 2.2957], // Amiens
+            '62000': [50.2929, 2.7767], // Arras
+            '51000': [49.2583, 4.0317], // Châlons-en-Champagne
+            '54000': [48.6921, 6.1844], // Nancy
+            '57000': [49.1193, 6.1757], // Metz
+            '68000': [47.7516, 7.3353], // Colmar
+            '25000': [47.2380, 6.0240], // Besançon
+            '39000': [46.6725, 5.5649], // Lons-le-Saunier
+            '70000': [47.6219, 6.1581], // Vesoul
+            '90000': [47.6380, 6.8628], // Belfort
+        };
+
+        // Initialize global variables
+        let postalData = [];
+        let filteredData = [];
+        let map = null;
+        let markersCluster = null;
+        let markers = new Map();
+        let highlightedMarker = null;
+        let communesLayer = null;
+        let isLoadingCommunes = false;
+        let userViewPreference = 'postal'; // 'department' or 'postal'
+        let postalCodeDatabase = new Map(); // Cache for geocoded postal codes
+
+        // Simple CSV parser to replace PapaParse
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) {
+                return { data: [], errors: ['CSV file must have at least a header and one data row'] };
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const data = [];
+            const errors = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                
+                if (values.length !== headers.length) {
+                    errors.push(`Row ${i + 1} has ${values.length} columns, expected ${headers.length}`);
+                    continue;
+                }
+
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+                data.push(row);
+            }
+
+            return { data, errors };
+        }
+
+        // Initialize Leaflet map
+        function initializeMap() {
+            // Create map centered on France
+            map = L.map('map').setView([46.603354, 1.888334], 6);
+
+            // Try different tile sources - some might not be blocked
+            // Use a simple gray tile for offline capability if all external sources fail
+            try {
+                // Try OpenStreetMap first
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18,
+                    errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2Y4ZjlmYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Y2EzYWYiPk1hcA==</text></svg>'
+                }).addTo(map);
+            } catch (e) {
+                console.log('External tiles blocked, using offline fallback');
+                // Create a simple gray background as fallback
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#f8f9fa';
+                ctx.fillRect(0, 0, 256, 256);
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Map', 128, 128);
+                
+                const dataUrl = canvas.toDataURL();
+                
+                L.tileLayer(dataUrl, {
+                    attribution: 'Offline Map',
+                    maxZoom: 18
+                }).addTo(map);
+            }
+
+            // Initialize marker cluster group
+            markersCluster = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50,
+                iconCreateFunction: function(cluster) {
+                    // Calculate sum of employee counts instead of just counting markers
+                    const markers = cluster.getAllChildMarkers();
+                    let totalEmployees = 0;
+                    
+                    markers.forEach(marker => {
+                        if (marker.options && marker.options.employeeCount) {
+                            totalEmployees += marker.options.employeeCount;
+                        }
+                    });
+                    
+                    // Enhanced sizing based on total employees with more size tiers
+                    let className = 'marker-cluster-small';
+                    let iconSize = 35;
+                    if (totalEmployees > 50) { 
+                        className = 'marker-cluster-medium'; 
+                        iconSize = 50; 
+                    }
+                    if (totalEmployees > 200) { 
+                        className = 'marker-cluster-large'; 
+                        iconSize = 65; 
+                    }
+                    if (totalEmployees > 500) { 
+                        className = 'marker-cluster-xlarge'; 
+                        iconSize = 85; 
+                    }
+                    
+                    return new L.DivIcon({
+                        html: '<div><span>' + totalEmployees.toLocaleString() + '</span></div>',
+                        className: 'marker-cluster ' + className,
+                        iconSize: new L.Point(iconSize, iconSize)
+                    });
+                }
+            });
+
+            map.addLayer(markersCluster);
+
+            // Add zoom event listener to update commune boundaries only
+            map.on('zoomend', function() {
+                // Load commune boundaries when zoomed in far enough
+                const currentZoom = map.getZoom();
+                if (currentZoom >= 10 && !communesLayer && !isLoadingCommunes) {
+                    loadCommunesBoundaries();
+                } else if (currentZoom < 10 && communesLayer) {
+                    // Remove commune boundaries when zoomed out
+                    map.removeLayer(communesLayer);
+                    communesLayer = null;
+                }
+            });
+        }
+
+        // Initialize map when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+        });
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const messageContainer = document.getElementById('messageContainer');
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function showMessage(message, type = 'error') {
+            messageContainer.innerHTML = `<div class="${type}-message">${message}</div>`;
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showMessage('❌ Veuillez sélectionner un fichier CSV valide.');
+                return;
+            }
+
+            showMessage('📊 Analyse du fichier en cours...', 'success');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csvText = e.target.result;
+                const results = parseCSV(csvText);
+                
+                if (results.errors.length > 0) {
+                    showMessage('❌ Erreur lors de l\'analyse du fichier CSV: ' + results.errors[0]);
+                    return;
+                }
+                
+                processCSVData(results.data);
+            };
+            
+            reader.onerror = function() {
+                showMessage('❌ Erreur lors de la lecture du fichier.');
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function processCSVData(data) {
+            // Detect column names
+            const headers = Object.keys(data[0] || {});
+            
+            const postalCodeColumns = ['Code Postaux', 'CP', 'postal', 'code'];
+            const countColumns = ['Count de Matricule Ouvrant-droit', 'Count', 'nombre', 'matricule', 'total'];
+            
+            let postalCodeCol = null;
+            let countCol = null;
+
+            // Find matching columns
+            for (const header of headers) {
+                if (postalCodeColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                    postalCodeCol = header;
+                }
+                if (countColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                    countCol = header;
+                }
+            }
+
+            if (!postalCodeCol || !countCol) {
+                showMessage('❌ Colonnes requises non trouvées. Vérifiez que votre CSV contient les colonnes de codes postaux et de comptage.');
+                return;
+            }
+
+            // Process and validate data
+            postalData = data.map(row => ({
+                postalCode: row[postalCodeCol],
+                count: parseInt(row[countCol]) || 0,
+                department: row[postalCodeCol] ? row[postalCodeCol].substring(0, 2) : ''
+            })).filter(item => {
+                return item.postalCode && 
+                       item.postalCode.length === 5 && 
+                       /^\d{5}$/.test(item.postalCode) &&
+                       item.count > 0;
+            });
+
+            if (postalData.length === 0) {
+                showMessage('❌ Aucune donnée valide trouvée. Vérifiez le format de vos codes postaux.');
+                return;
+            }
+
+            filteredData = [...postalData];
+            showMessage(`✅ ${postalData.length} codes postaux chargés avec succès!`, 'success');
+            
+            // Show dashboard
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            
+            // Fix map loading issue by invalidating size after dashboard becomes visible
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                }
+                updateDashboard();
+            }, 100);
+        }
+
+        function updateDashboard() {
+            updateStatistics();
+            updateTopCodes();
+            updateBarChart();
+            updateMap();
+        }
+
+        function updateStatistics() {
+            const totalCodes = filteredData.length;
+            const totalEmployees = filteredData.reduce((sum, item) => sum + item.count, 0);
+            const averagePerCode = totalCodes > 0 ? Math.round(totalEmployees / totalCodes) : 0;
+            const maxValue = Math.max(...filteredData.map(item => item.count));
+
+            document.getElementById('totalCodes').textContent = totalCodes.toLocaleString();
+            document.getElementById('totalEmployees').textContent = totalEmployees.toLocaleString();
+            document.getElementById('averagePerCode').textContent = averagePerCode.toLocaleString();
+            document.getElementById('maxValue').textContent = maxValue.toLocaleString();
+        }
+
+        function updateTopCodes() {
+            const sorted = [...filteredData].sort((a, b) => b.count - a.count).slice(0, 10);
+            const topCodesContainer = document.getElementById('topCodes');
+            
+            topCodesContainer.innerHTML = sorted.map((item, index) => 
+                `<div class="code-item" onclick="highlightPostalCode('${item.postalCode}')">
+                    <span>#${index + 1} ${item.postalCode}</span>
+                    <span>${item.count.toLocaleString()}</span>
+                </div>`
+            ).join('');
+        }
+
+        function updateBarChart() {
+            // Group by department
+            const deptData = {};
+            filteredData.forEach(item => {
+                if (!deptData[item.department]) {
+                    deptData[item.department] = 0;
+                }
+                deptData[item.department] += item.count;
+            });
+
+            // Sort and take top 15
+            const sortedDepts = Object.entries(deptData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 15);
+
+            const maxValue = Math.max(...sortedDepts.map(([,count]) => count));
+            const barChart = document.getElementById('barChart');
+
+            barChart.innerHTML = sortedDepts.map(([dept, count]) => {
+                const width = (count / maxValue) * 100;
+                return `
+                    <div class="bar-item">
+                        <div class="bar-label">${dept}</div>
+                        <div class="bar" style="width: ${width}%"></div>
+                        <div class="bar-value">${count.toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateMap() {
+            // Clear existing markers
+            markersCluster.clearLayers();
+            markers.clear();
+
+            if (filteredData.length === 0) return;
+
+            // Use user preference from toggle switch
+            if (userViewPreference === 'department') {
+                updateMapWithDepartmentClustering();
+            } else {
+                updateMapWithPostalCodes();
+            }
+        }
+
+        function updateMapWithDepartmentClustering() {
+            // Group data by department and sum employee counts
+            const departmentData = {};
+            filteredData.forEach(item => {
+                if (!departmentData[item.department]) {
+                    departmentData[item.department] = {
+                        department: item.department,
+                        totalCount: 0,
+                        postalCodes: []
+                    };
+                }
+                departmentData[item.department].totalCount += item.count;
+                departmentData[item.department].postalCodes.push(item.postalCode);
+            });
+
+            // Calculate intensity scale for departments
+            const deptCounts = Object.values(departmentData).map(d => d.totalCount);
+            const maxCount = Math.max(...deptCounts);
+            const minCount = Math.min(...deptCounts);
+
+            // Add department markers
+            Object.values(departmentData).forEach(deptData => {
+                const deptCoords = getDepartmentCenter(deptData.department);
+                if (deptCoords) {
+                    addDepartmentMarkerToMap(deptData, deptCoords, maxCount, minCount);
+                }
+            });
+        }
+
+        function updateMapWithPostalCodes() {
+            // If we don't have geocoding data, load it first
+            const departments = [...new Set(filteredData.map(item => item.department))];
+            loadPostalCodeGeocoding(departments).then(() => {
+                renderPostalCodeMarkers();
+            });
+        }
+
+        async function loadPostalCodeGeocoding(departments) {
+            const promises = departments.map(async (dept) => {
+                // Skip if we already have data for this department
+                if (postalCodeDatabase.has(`dept_${dept}`)) {
+                    return;
+                }
+
+                try {
+                    // Load all communes for this department
+                    const response = await fetch(
+                        `https://geo.api.gouv.fr/communes?codeDepartement=${dept}&fields=nom,code,codesPostaux,centre&format=json`
+                    );
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const communes = await response.json();
+                    
+                    // Process each commune and its postal codes
+                    communes.forEach(commune => {
+                        if (commune.codesPostaux && commune.centre) {
+                            commune.codesPostaux.forEach(postalCode => {
+                                postalCodeDatabase.set(postalCode, {
+                                    lat: commune.centre.coordinates[1],
+                                    lng: commune.centre.coordinates[0],
+                                    commune: commune.nom,
+                                    department: dept
+                                });
+                            });
+                        }
+                    });
+                    
+                    // Mark this department as loaded
+                    postalCodeDatabase.set(`dept_${dept}`, true);
+                    
+                } catch (error) {
+                    console.warn(`Could not load geocoding for department ${dept}:`, error);
+                    // Mark as attempted to avoid repeated failures
+                    postalCodeDatabase.set(`dept_${dept}`, false);
+                }
+            });
+
+            await Promise.all(promises);
+        }
+
+        function renderPostalCodeMarkers() {
+            // Calculate intensity scale
+            const maxCount = Math.max(...filteredData.map(item => item.count));
+            const minCount = Math.min(...filteredData.map(item => item.count));
+
+            // Add markers for each postal code
+            filteredData.forEach(item => {
+                const geocodedData = postalCodeDatabase.get(item.postalCode);
+                
+                if (geocodedData && geocodedData.lat && geocodedData.lng) {
+                    // Use geocoded coordinates
+                    addMarkerToMap(item, [geocodedData.lat, geocodedData.lng], maxCount, minCount, geocodedData.commune);
+                } else {
+                    // Fallback to static coordinates or department center
+                    const coords = postalCodeCoordinates[item.postalCode];
+                    if (coords) {
+                        addMarkerToMap(item, coords, maxCount, minCount);
+                    } else {
+                        // Use department center with random offset
+                        const deptCoords = getDepartmentCenter(item.department);
+                        if (deptCoords) {
+                            const offsetCoords = [
+                                deptCoords[0] + (Math.random() - 0.5) * 0.1,
+                                deptCoords[1] + (Math.random() - 0.5) * 0.1
+                            ];
+                            addMarkerToMap(item, offsetCoords, maxCount, minCount);
+                        }
+                    }
+                }
+            });
+        }
+
+        function addDepartmentMarkerToMap(deptData, coords, maxCount, minCount) {
+            // Use SAME sizing logic as clusters for consistency
+            let markerSize, iconSize;
+            if (deptData.totalCount <= 50) {
+                markerSize = 'small';
+                iconSize = [35, 35]; // Same as marker-cluster-small
+            } else if (deptData.totalCount <= 200) {
+                markerSize = 'medium';
+                iconSize = [50, 50]; // Same as marker-cluster-medium
+            } else if (deptData.totalCount <= 500) {
+                markerSize = 'large';
+                iconSize = [65, 65]; // Same as marker-cluster-large
+            } else {
+                markerSize = 'xlarge';
+                iconSize = [85, 85]; // Same as marker-cluster-xlarge
+            }
+
+            // Create department marker with SAME styling as clusters
+            const markerHtml = `
+                <div class="department-marker marker-${markerSize}" style="
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    border: 3px solid rgba(255, 255, 255, 0.8);
+                    width: ${iconSize[0]}px;
+                    height: ${iconSize[1]}px;
+                ">
+                    <div class="marker-count">${deptData.totalCount}</div>
+                    <div class="marker-dept">${deptData.department}</div>
+                </div>
+            `;
+            
+            const customIcon = L.divIcon({
+                html: markerHtml,
+                className: 'custom-div-icon department-div-icon',
+                iconSize: iconSize,
+                iconAnchor: [iconSize[0]/2, iconSize[1]/2]
+            });
+
+            // Create marker with employee count stored for clustering
+            const marker = L.marker(coords, { 
+                icon: customIcon,
+                employeeCount: deptData.totalCount // Store employee count for clustering
+            });
+            
+            // Add popup with department information
+            marker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>Département: ${deptData.department}</strong><br>
+                    <strong>Total Employés: ${deptData.totalCount.toLocaleString()}</strong><br>
+                    <strong>Codes Postaux: ${deptData.postalCodes.length}</strong><br>
+                    <div style="font-size: 0.9em; margin-top: 5px;">
+                        ${deptData.postalCodes.slice(0, 5).join(', ')}${deptData.postalCodes.length > 5 ? '...' : ''}
+                    </div>
+                </div>
+            `);
+
+            // Store marker reference with department key
+            markers.set(`dept_${deptData.department}`, marker);
+            
+            // Add to cluster group
+            markersCluster.addLayer(marker);
+        }
+
+        function addMarkerToMap(item, coords, maxCount, minCount, commune = null) {
+            // Calculate marker size and color based on employee count using same logic as clusters
+            const intensity = (item.count - minCount) / (maxCount - minCount);
+            
+            // Use SAME sizing logic as clusters for consistency
+            let markerSize;
+            let iconSize, anchorPoint, fontSize, labelPadding;
+            if (item.count <= 50) {
+                markerSize = 'small';
+                iconSize = [35, 35]; // Same as marker-cluster-small
+                anchorPoint = [17, 17];
+                fontSize = '11px';
+                labelPadding = '3px 7px';
+            } else if (item.count <= 200) {
+                markerSize = 'medium';
+                iconSize = [50, 50]; // Same as marker-cluster-medium
+                anchorPoint = [25, 25];
+                fontSize = '13px';
+                labelPadding = '4px 8px';
+            } else if (item.count <= 500) {
+                markerSize = 'large';
+                iconSize = [65, 65]; // Same as marker-cluster-large
+                anchorPoint = [32, 32];
+                fontSize = '15px';
+                labelPadding = '5px 9px';
+            } else {
+                markerSize = 'xlarge';
+                iconSize = [85, 85]; // Same as marker-cluster-xlarge
+                anchorPoint = [42, 42];
+                fontSize = '17px';
+                labelPadding = '6px 10px';
+            }
+
+            // Use SAME background gradient as clusters
+            const markerHtml = `
+                <div style="position: relative; text-align: center;">
+                    <div style="
+                        background: linear-gradient(135deg, #667eea, #764ba2); 
+                        width: ${iconSize[0]}px; 
+                        height: ${iconSize[1]}px; 
+                        border-radius: 50%; 
+                        border: 3px solid rgba(255, 255, 255, 0.8);
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: ${fontSize};
+                        font-weight: bold;
+                    ">${item.count}</div>
+                    <div style="
+                        position: absolute;
+                        top: -26px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(0,0,0,0.8);
+                        color: white;
+                        padding: ${labelPadding};
+                        border-radius: 4px;
+                        font-size: 11px;
+                        white-space: nowrap;
+                        font-weight: bold;
+                        border: 1px solid white;
+                    ">${item.postalCode}</div>
+                </div>
+            `;
+            
+            const customIcon = L.divIcon({
+                html: markerHtml,
+                className: 'custom-div-icon',
+                iconSize: [iconSize[0] + 15, iconSize[1] + 30], // Extra space for label
+                iconAnchor: [anchorPoint[0] + 7, anchorPoint[1] + 15] // Adjust for label
+            });
+
+            // Create marker with employee count stored for clustering
+            const marker = L.marker(coords, { 
+                icon: customIcon,
+                employeeCount: item.count // Store employee count for clustering
+            });
+            
+            // Add popup with postal code information
+            const popupContent = `
+                <div style="text-align: center;">
+                    <strong>Code Postal: ${item.postalCode}</strong><br>
+                    <strong>Département: ${item.department}</strong><br>
+                    ${commune ? `<strong>Commune: ${commune}</strong><br>` : ''}
+                    <strong>Employés: ${item.count.toLocaleString()}</strong>
+                </div>
+            `;
+            marker.bindPopup(popupContent);
+
+            // Store marker reference
+            markers.set(item.postalCode, marker);
+            
+            // Add to cluster group
+            markersCluster.addLayer(marker);
+        }
+
+        function getDepartmentCenter(deptCode) {
+            // Approximate centers for French departments (simplified)
+            const deptCenters = {
+                '01': [46.2044, 5.2281], // Ain
+                '02': [49.4431, 3.3939], // Aisne
+                '03': [46.3434, 3.4171], // Allier
+                '04': [44.2619, 6.2371], // Alpes-de-Haute-Provence
+                '05': [44.6570, 6.0802], // Hautes-Alpes
+                '06': [43.7102, 7.2620], // Alpes-Maritimes
+                '07': [44.7357, 4.3734], // Ardèche
+                '08': [49.7344, 4.7221], // Ardennes
+                '09': [42.9636, 1.6027], // Ariège
+                '10': [48.2973, 4.0781], // Aube
+                '11': [43.0504, 2.3522], // Aude
+                '12': [44.3518, 2.5684], // Aveyron
+                '13': [43.5297, 5.4474], // Bouches-du-Rhône
+                '14': [49.1829, -0.3707], // Calvados
+                '15': [45.0357, 2.4441], // Cantal
+                '16': [45.6978, 0.1576], // Charente
+                '17': [45.7485, -0.6365], // Charente-Maritime
+                '18': [47.0810, 2.3987], // Cher
+                '19': [45.2669, 1.7706], // Corrèze
+                '21': [47.3220, 5.0415], // Côte-d'Or
+                '22': [48.4569, -2.7574], // Côtes-d'Armor
+                '23': [46.1717, 2.1214], // Creuse
+                '24': [45.1851, 0.7213], // Dordogne
+                '25': [47.2380, 6.0240], // Doubs
+                '26': [44.7338, 4.8927], // Drôme
+                '27': [49.0262, 0.8906], // Eure
+                '28': [48.4469, 1.4884], // Eure-et-Loir
+                '29': [48.2020, -4.2649], // Finistère
+                '30': [43.8376, 4.3601], // Gard
+                '31': [43.6047, 1.4442], // Haute-Garonne
+                '32': [43.6467, 0.5861], // Gers
+                '33': [44.8378, -0.5792], // Gironde
+                '34': [43.6110, 3.8767], // Hérault
+                '35': [48.1173, -1.6778], // Ille-et-Vilaine
+                '36': [46.8076, 1.6906], // Indre
+                '37': [47.3941, 0.6848], // Indre-et-Loire
+                '38': [45.1885, 5.7245], // Isère
+                '39': [46.6725, 5.5649], // Jura
+                '40': [44.0154, -0.7454], // Landes
+                '41': [47.7515, 1.3052], // Loir-et-Cher
+                '42': [45.4397, 4.3872], // Loire
+                '43': [45.0430, 3.8845], // Haute-Loire
+                '44': [47.2184, -1.5536], // Loire-Atlantique
+                '45': [47.9029, 2.1781], // Loiret
+                '46': [44.4477, 1.4411], // Lot
+                '47': [44.3106, 0.7541], // Lot-et-Garonne
+                '48': [44.5176, 3.5016], // Lozère
+                '49': [47.4739, -0.5515], // Maine-et-Loire
+                '50': [49.1159, -1.3086], // Manche
+                '51': [49.2583, 4.0317], // Marne
+                '52': [48.1133, 5.1379], // Haute-Marne
+                '53': [48.0679, -0.7702], // Mayenne
+                '54': [48.6921, 6.1844], // Meurthe-et-Moselle
+                '55': [49.1610, 5.3877], // Meuse
+                '56': [47.7483, -2.7591], // Morbihan
+                '57': [49.1193, 6.1757], // Moselle
+                '58': [47.2610, 3.5311], // Nièvre
+                '59': [50.6292, 3.0573], // Nord
+                '60': [49.4144, 2.8215], // Oise
+                '61': [48.6200, 0.1581], // Orne
+                '62': [50.2929, 2.7767], // Pas-de-Calais
+                '63': [45.7772, 3.0870], // Puy-de-Dôme
+                '64': [43.2951, -0.3707], // Pyrénées-Atlantiques
+                '65': [43.2329, 0.0785], // Hautes-Pyrénées
+                '66': [42.6886, 2.8946], // Pyrénées-Orientales
+                '67': [48.5734, 7.7521], // Bas-Rhin
+                '68': [47.7516, 7.3353], // Haut-Rhin
+                '69': [45.7675, 4.8351], // Rhône
+                '70': [47.6219, 6.1581], // Haute-Saône
+                '71': [46.7814, 4.8578], // Saône-et-Loire
+                '72': [48.0077, 0.1996], // Sarthe
+                '73': [45.5646, 6.3223], // Savoie
+                '74': [46.0763, 6.4473], // Haute-Savoie
+                '75': [48.8566, 2.3522], // Paris
+                '76': [49.4431, 1.0993], // Seine-Maritime
+                '77': [48.8566, 2.8522], // Seine-et-Marne
+                '78': [48.8566, 2.1522], // Yvelines
+                '79': [46.3230, -0.4595], // Deux-Sèvres
+                '80': [49.8942, 2.2957], // Somme
+                '81': [43.9297, 2.1489], // Tarn
+                '82': [44.0151, 1.3554], // Tarn-et-Garonne
+                '83': [43.4742, 6.2388], // Var
+                '84': [44.0394, 5.0479], // Vaucluse
+                '85': [46.6708, -1.4266], // Vendée
+                '86': [46.5802, 0.3404], // Vienne
+                '87': [45.8336, 1.2611], // Haute-Vienne
+                '88': [48.1716, 6.4518], // Vosges
+                '89': [47.7982, 3.5731], // Yonne
+                '90': [47.6380, 6.8628], // Territoire de Belfort
+                '91': [48.6319, 2.4392], // Essonne
+                '92': [48.8566, 2.2400], // Hauts-de-Seine
+                '93': [48.9356, 2.4539], // Seine-Saint-Denis
+                '94': [48.7851, 2.4637], // Val-de-Marne
+                '95': [49.0501, 2.2014]  // Val-d'Oise
+            };
+            
+            return deptCenters[deptCode] || null;
+        }
+
+        // Function to load French commune boundaries for detailed view
+        function loadCommunesBoundaries() {
+            if (isLoadingCommunes) return;
+            isLoadingCommunes = true;
+            
+            // Use the French government's geo API for commune boundaries
+            // This loads a simplified version for performance
+            const bounds = map.getBounds();
+            const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+            
+            fetch(`https://geo.api.gouv.fr/communes?format=geojson&geometry=contour&boost=population&limit=100`)
+                .then(response => response.json())
+                .then(data => {
+                    if (communesLayer) {
+                        map.removeLayer(communesLayer);
+                    }
+                    
+                    communesLayer = L.geoJSON(data, {
+                        style: function(feature) {
+                            // Find matching postal data for this commune
+                            const communePostalCodes = feature.properties.codesPostaux || [];
+                            const matchingData = filteredData.filter(item => 
+                                communePostalCodes.includes(item.postalCode)
+                            );
+                            
+                            const totalEmployees = matchingData.reduce((sum, item) => sum + item.count, 0);
+                            
+                            // Color based on employee density
+                            const intensity = totalEmployees > 0 ? Math.min(totalEmployees / 100, 1) : 0;
+                            
+                            return {
+                                fillColor: getColor(intensity),
+                                weight: 1,
+                                opacity: 0.8,
+                                color: 'white',
+                                fillOpacity: intensity > 0 ? 0.6 : 0.1
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            const communePostalCodes = feature.properties.codesPostaux || [];
+                            const matchingData = filteredData.filter(item => 
+                                communePostalCodes.includes(item.postalCode)
+                            );
+                            const totalEmployees = matchingData.reduce((sum, item) => sum + item.count, 0);
+                            
+                            layer.bindPopup(`
+                                <div style="text-align: center;">
+                                    <strong>${feature.properties.nom}</strong><br>
+                                    <strong>Code commune: ${feature.properties.code}</strong><br>
+                                    <strong>Codes postaux: ${communePostalCodes.join(', ') || 'N/A'}</strong><br>
+                                    <strong>Employés: ${totalEmployees.toLocaleString()}</strong>
+                                </div>
+                            `);
+                            
+                            layer.on('mouseover', function() {
+                                layer.setStyle({
+                                    weight: 3,
+                                    color: '#666',
+                                    fillOpacity: 0.8
+                                });
+                            });
+                            
+                            layer.on('mouseout', function() {
+                                communesLayer.resetStyle(layer);
+                            });
+                        }
+                    });
+                    
+                    // Add communes layer below markers
+                    map.addLayer(communesLayer);
+                    communesLayer.bringToBack();
+                })
+                .catch(error => {
+                    console.warn('Could not load commune boundaries:', error);
+                })
+                .finally(() => {
+                    isLoadingCommunes = false;
+                });
+        }
+
+        // Color scale for commune choropleth
+        function getColor(intensity) {
+            return intensity > 0.8 ? '#800026' :
+                   intensity > 0.6 ? '#BD0026' :
+                   intensity > 0.4 ? '#E31A1C' :
+                   intensity > 0.2 ? '#FC4E2A' :
+                   intensity > 0.1 ? '#FD8D3C' :
+                   intensity > 0 ? '#FEB24C' :
+                                   '#FFEDA0';
+        }
+
+        function highlightPostalCode(postalCode) {
+            // Remove previous highlight
+            if (highlightedMarker) {
+                const markerElement = highlightedMarker._icon;
+                if (markerElement) {
+                    const markerDiv = markerElement.querySelector('.custom-marker');
+                    if (markerDiv) {
+                        markerDiv.classList.remove('marker-highlighted');
+                    }
+                }
+                highlightedMarker = null;
+            }
+
+            // Highlight the new marker
+            const marker = markers.get(postalCode);
+            if (marker) {
+                const markerElement = marker._icon;
+                if (markerElement) {
+                    const markerDiv = markerElement.querySelector('.custom-marker');
+                    if (markerDiv) {
+                        markerDiv.classList.add('marker-highlighted');
+                        highlightedMarker = marker;
+                        
+                        // Center map on the highlighted marker
+                        map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
+                        
+                        // Open popup
+                        marker.openPopup();
+                    }
+                }
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredData = [...postalData];
+            } else {
+                filteredData = postalData.filter(item => 
+                    item.postalCode.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            updateDashboard();
+        });
+
+        // Toggle switch functionality
+        document.getElementById('viewToggle').addEventListener('change', (e) => {
+            userViewPreference = e.target.checked ? 'postal' : 'department';
+            if (filteredData.length > 0) {
+                updateMap();
+            }
+        });
+
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            const mapPanel = document.querySelector('.glass-panel:has(#map)');
+            const fullscreenBtn = document.querySelector('.fullscreen-btn');
+            
+            if (mapPanel.classList.contains('map-fullscreen')) {
+                // Exit fullscreen
+                mapPanel.classList.remove('map-fullscreen');
+                fullscreenBtn.innerHTML = '🔍 Plein écran';
+                // Recalculate map size
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize();
+                    }
+                }, 100);
+            } else {
+                // Enter fullscreen
+                mapPanel.classList.add('map-fullscreen');
+                fullscreenBtn.innerHTML = '🗗 Sortir plein écran';
+                // Recalculate map size
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize();
+                    }
+                }, 100);
+            }
+        }
+
+        // Allow escape key to exit fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const mapPanel = document.querySelector('.glass-panel:has(#map)');
+                if (mapPanel && mapPanel.classList.contains('map-fullscreen')) {
+                    toggleFullscreen();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

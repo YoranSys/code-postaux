@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 French Postal Code Dashboard Tests</h1>
+    
+    <div class="test-container">
+        <h2>📋 Test Dashboard Loading</h2>
+        <div id="loadTest"></div>
+        <iframe id="dashboardFrame" src="dashboard.html"></iframe>
+    </div>
+
+    <div class="test-container">
+        <h2>🔬 Automated Tests</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testCSVParsing()">Test CSV Parsing</button>
+        <button onclick="testSearch()">Test Search</button>
+        <button onclick="testStatistics()">Test Statistics</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 Manual Testing Guide</h2>
+        <div class="test-info">
+            <h3>Manual Test Steps:</h3>
+            <ol>
+                <li><strong>File Upload Test:</strong>
+                    <ul>
+                        <li>Try uploading the sample_data.csv file</li>
+                        <li>Verify drag & drop functionality works</li>
+                        <li>Check error handling with invalid files</li>
+                    </ul>
+                </li>
+                <li><strong>Dashboard Display Test:</strong>
+                    <ul>
+                        <li>Verify statistics panel shows correct numbers</li>
+                        <li>Check that the map displays and departments change color</li>
+                        <li>Confirm top 10 postal codes are listed correctly</li>
+                    </ul>
+                </li>
+                <li><strong>Interaction Test:</strong>
+                    <ul>
+                        <li>Use the search functionality to filter postal codes</li>
+                        <li>Click on top postal codes to highlight departments</li>
+                        <li>Hover over map departments to see tooltips</li>
+                    </ul>
+                </li>
+                <li><strong>Responsive Design Test:</strong>
+                    <ul>
+                        <li>Resize browser window to test mobile view</li>
+                        <li>Check that all elements remain accessible</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function addTestResult(test, status, message) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result test-${status}`;
+            resultDiv.innerHTML = `<strong>${test}:</strong> ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function testCSVParsing() {
+            addTestResult('CSV Column Detection', 'info', 'Testing CSV parsing functionality...');
+            
+            // Test data with different column formats
+            const testData1 = [
+                {headers: ['Code Postaux', 'Count de Matricule Ouvrant-droit'], expected: true},
+                {headers: ['CP', 'Count'], expected: true},
+                {headers: ['postal', 'total'], expected: true},
+                {headers: ['invalid', 'columns'], expected: false}
+            ];
+
+            let passed = 0;
+            let total = testData1.length;
+
+            testData1.forEach((test, index) => {
+                const postalCodeColumns = ['Code Postaux', 'CP', 'postal', 'code'];
+                const countColumns = ['Count de Matricule Ouvrant-droit', 'Count', 'nombre', 'matricule', 'total'];
+                
+                let postalCodeCol = null;
+                let countCol = null;
+
+                for (const header of test.headers) {
+                    if (postalCodeColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                        postalCodeCol = header;
+                    }
+                    if (countColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                        countCol = header;
+                    }
+                }
+
+                const hasValidColumns = !!(postalCodeCol && countCol);
+                const result = hasValidColumns === test.expected;
+                if (result) passed++;
+
+                addTestResult(
+                    `CSV Format ${index + 1}`, 
+                    result ? 'pass' : 'fail',
+                    `Headers: [${test.headers.join(', ')}] - ${result ? 'PASS' : 'FAIL'}`
+                );
+            });
+
+            addTestResult('CSV Parsing Summary', passed === total ? 'pass' : 'fail', `${passed}/${total} tests passed`);
+        }
+
+        function testSearch() {
+            addTestResult('Search Functionality', 'info', 'Testing search and filtering...');
+            
+            // Mock data for testing
+            const mockData = [
+                {postalCode: '75001', count: 45, department: '75'},
+                {postalCode: '75002', count: 32, department: '75'},
+                {postalCode: '69001', count: 89, department: '69'},
+                {postalCode: '13001', count: 123, department: '13'}
+            ];
+
+            // Test search function
+            function mockSearch(data, searchTerm) {
+                return data.filter(item => 
+                    item.postalCode.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+
+            const tests = [
+                {term: '75', expected: 2},
+                {term: '750', expected: 2},
+                {term: '69', expected: 1},
+                {term: '999', expected: 0}
+            ];
+
+            let passed = 0;
+            tests.forEach(test => {
+                const result = mockSearch(mockData, test.term);
+                const success = result.length === test.expected;
+                if (success) passed++;
+                
+                addTestResult(
+                    `Search '${test.term}'`,
+                    success ? 'pass' : 'fail',
+                    `Expected ${test.expected}, got ${result.length} results`
+                );
+            });
+
+            addTestResult('Search Summary', passed === tests.length ? 'pass' : 'fail', `${passed}/${tests.length} tests passed`);
+        }
+
+        function testStatistics() {
+            addTestResult('Statistics Calculation', 'info', 'Testing statistics computation...');
+            
+            const mockData = [
+                {postalCode: '75001', count: 100, department: '75'},
+                {postalCode: '75002', count: 200, department: '75'},
+                {postalCode: '69001', count: 300, department: '69'}
+            ];
+
+            const totalCodes = mockData.length;
+            const totalEmployees = mockData.reduce((sum, item) => sum + item.count, 0);
+            const averagePerCode = Math.round(totalEmployees / totalCodes);
+            const maxValue = Math.max(...mockData.map(item => item.count));
+
+            const tests = [
+                {name: 'Total Codes', result: totalCodes, expected: 3},
+                {name: 'Total Employees', result: totalEmployees, expected: 600},
+                {name: 'Average per Code', result: averagePerCode, expected: 200},
+                {name: 'Maximum Value', result: maxValue, expected: 300}
+            ];
+
+            let passed = 0;
+            tests.forEach(test => {
+                const success = test.result === test.expected;
+                if (success) passed++;
+                
+                addTestResult(
+                    test.name,
+                    success ? 'pass' : 'fail',
+                    `Expected ${test.expected}, got ${test.result}`
+                );
+            });
+
+            addTestResult('Statistics Summary', passed === tests.length ? 'pass' : 'fail', `${passed}/${tests.length} tests passed`);
+        }
+
+        function runAllTests() {
+            document.getElementById('testResults').innerHTML = '';
+            addTestResult('Test Suite', 'info', 'Running all automated tests...');
+            
+            setTimeout(() => testCSVParsing(), 100);
+            setTimeout(() => testSearch(), 500);
+            setTimeout(() => testStatistics(), 900);
+            
+            setTimeout(() => {
+                addTestResult('All Tests Complete', 'info', 'Review results above. Don\'t forget to run manual tests!');
+            }, 1300);
+        }
+
+        // Test dashboard loading
+        window.addEventListener('load', () => {
+            const loadTest = document.getElementById('loadTest');
+            const iframe = document.getElementById('dashboardFrame');
+            
+            iframe.onload = () => {
+                loadTest.innerHTML = '<div class="test-result test-pass"><strong>Dashboard Loading:</strong> ✅ Dashboard loaded successfully</div>';
+            };
+            
+            iframe.onerror = () => {
+                loadTest.innerHTML = '<div class="test-result test-fail"><strong>Dashboard Loading:</strong> ❌ Failed to load dashboard</div>';
+            };
+        });
+    </script>
+</body>
+</html>
