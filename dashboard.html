@@ -347,6 +347,97 @@
             border: 1px solid rgba(76, 175, 80, 0.3);
         }
 
+        /* Toggle Switch Styles */
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .map-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .toggle-input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            transition: background 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .toggle-input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+
+        .toggle-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            min-width: 80px;
+        }
+
+        .toggle-dept {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .toggle-postal {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .toggle-input:not(:checked) ~ .toggle-text .toggle-dept {
+            opacity: 1;
+            font-weight: bold;
+        }
+
+        .toggle-input:checked ~ .toggle-text .toggle-postal {
+            opacity: 1;
+            font-weight: bold;
+        }
+
         @media (max-width: 768px) {
             .dashboard {
                 grid-template-columns: 1fr;
@@ -490,7 +581,21 @@
 
             <!-- Right Panel - Map -->
             <div class="glass-panel">
-                <h2 style="color: white; margin-bottom: 20px; text-align: center;">🗺️ Carte de France</h2>
+                <div class="map-header">
+                    <h2 style="color: white; text-align: center;">🗺️ Carte de France</h2>
+                    <div class="map-controls">
+                        <div class="toggle-switch">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="viewToggle" class="toggle-input" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-text">
+                                    <span class="toggle-dept">Départements</span>
+                                    <span class="toggle-postal">Codes Postaux</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
                 <div class="map-container">
                     <div id="map"></div>
                 </div>
@@ -616,6 +721,8 @@
         let highlightedMarker = null;
         let communesLayer = null;
         let isLoadingCommunes = false;
+        let userViewPreference = 'postal'; // 'department' or 'postal'
+        let postalCodeDatabase = new Map(); // Cache for geocoded postal codes
 
         // Simple CSV parser to replace PapaParse
         function parseCSV(csvText) {
@@ -705,12 +812,8 @@
 
             map.addLayer(markersCluster);
 
-            // Add zoom event listener to update clustering behavior
+            // Add zoom event listener to update commune boundaries only
             map.on('zoomend', function() {
-                if (filteredData.length > 0) {
-                    updateMap();
-                }
-                
                 // Load commune boundaries when zoomed in far enough
                 const currentZoom = map.getZoom();
                 if (currentZoom >= 10 && !communesLayer && !isLoadingCommunes) {
@@ -919,10 +1022,8 @@
 
             if (filteredData.length === 0) return;
 
-            const currentZoom = map.getZoom();
-            
-            // Use department clustering for zoom levels < 8, postal codes for zoom >= 8
-            if (currentZoom < 8) {
+            // Use user preference from toggle switch
+            if (userViewPreference === 'department') {
                 updateMapWithDepartmentClustering();
             } else {
                 updateMapWithPostalCodes();
@@ -959,27 +1060,87 @@
         }
 
         function updateMapWithPostalCodes() {
+            // If we don't have geocoding data, load it first
+            const departments = [...new Set(filteredData.map(item => item.department))];
+            loadPostalCodeGeocoding(departments).then(() => {
+                renderPostalCodeMarkers();
+            });
+        }
+
+        async function loadPostalCodeGeocoding(departments) {
+            const promises = departments.map(async (dept) => {
+                // Skip if we already have data for this department
+                if (postalCodeDatabase.has(`dept_${dept}`)) {
+                    return;
+                }
+
+                try {
+                    // Load all communes for this department
+                    const response = await fetch(
+                        `https://geo.api.gouv.fr/communes?codeDepartement=${dept}&fields=nom,code,codesPostaux,centre&format=json`
+                    );
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const communes = await response.json();
+                    
+                    // Process each commune and its postal codes
+                    communes.forEach(commune => {
+                        if (commune.codesPostaux && commune.centre) {
+                            commune.codesPostaux.forEach(postalCode => {
+                                postalCodeDatabase.set(postalCode, {
+                                    lat: commune.centre.coordinates[1],
+                                    lng: commune.centre.coordinates[0],
+                                    commune: commune.nom,
+                                    department: dept
+                                });
+                            });
+                        }
+                    });
+                    
+                    // Mark this department as loaded
+                    postalCodeDatabase.set(`dept_${dept}`, true);
+                    
+                } catch (error) {
+                    console.warn(`Could not load geocoding for department ${dept}:`, error);
+                    // Mark as attempted to avoid repeated failures
+                    postalCodeDatabase.set(`dept_${dept}`, false);
+                }
+            });
+
+            await Promise.all(promises);
+        }
+
+        function renderPostalCodeMarkers() {
             // Calculate intensity scale
             const maxCount = Math.max(...filteredData.map(item => item.count));
             const minCount = Math.min(...filteredData.map(item => item.count));
 
             // Add markers for each postal code
             filteredData.forEach(item => {
-                const coords = postalCodeCoordinates[item.postalCode];
-                if (!coords) {
-                    // For postal codes without specific coordinates, approximate based on department
-                    const deptCode = item.department;
-                    const deptCoords = getDepartmentCenter(deptCode);
-                    if (deptCoords) {
-                        // Add some random offset for multiple postal codes in same department
-                        const offsetCoords = [
-                            deptCoords[0] + (Math.random() - 0.5) * 0.1,
-                            deptCoords[1] + (Math.random() - 0.5) * 0.1
-                        ];
-                        addMarkerToMap(item, offsetCoords, maxCount, minCount);
-                    }
+                const geocodedData = postalCodeDatabase.get(item.postalCode);
+                
+                if (geocodedData && geocodedData.lat && geocodedData.lng) {
+                    // Use geocoded coordinates
+                    addMarkerToMap(item, [geocodedData.lat, geocodedData.lng], maxCount, minCount, geocodedData.commune);
                 } else {
-                    addMarkerToMap(item, coords, maxCount, minCount);
+                    // Fallback to static coordinates or department center
+                    const coords = postalCodeCoordinates[item.postalCode];
+                    if (coords) {
+                        addMarkerToMap(item, coords, maxCount, minCount);
+                    } else {
+                        // Use department center with random offset
+                        const deptCoords = getDepartmentCenter(item.department);
+                        if (deptCoords) {
+                            const offsetCoords = [
+                                deptCoords[0] + (Math.random() - 0.5) * 0.1,
+                                deptCoords[1] + (Math.random() - 0.5) * 0.1
+                            ];
+                            addMarkerToMap(item, offsetCoords, maxCount, minCount);
+                        }
+                    }
                 }
             });
         }
@@ -1031,37 +1192,82 @@
             markersCluster.addLayer(marker);
         }
 
-        function addMarkerToMap(item, coords, maxCount, minCount) {
+        function addMarkerToMap(item, coords, maxCount, minCount, commune = null) {
             // Calculate marker size and color based on employee count
             const intensity = (item.count - minCount) / (maxCount - minCount);
             
             // Determine marker size
             let markerSize;
-            if (intensity < 0.33) markerSize = 'small';
-            else if (intensity < 0.66) markerSize = 'medium';
-            else markerSize = 'large';
+            let iconSize, anchorPoint;
+            if (intensity < 0.33) {
+                markerSize = 'small';
+                iconSize = [20, 20];
+                anchorPoint = [10, 10];
+            } else if (intensity < 0.66) {
+                markerSize = 'medium';
+                iconSize = [30, 30];
+                anchorPoint = [15, 15];
+            } else {
+                markerSize = 'large';
+                iconSize = [40, 40];
+                anchorPoint = [20, 20];
+            }
 
-            // Create custom marker icon
-            const markerHtml = `<div class="custom-marker marker-${markerSize}" style="background: hsl(${240 + intensity * 60}, 70%, ${50 + intensity * 20}%);"></div>`;
+            // Create custom marker icon with visible postal code
+            const color = `hsl(${240 + intensity * 60}, 70%, ${50 + intensity * 20}%)`;
+            const markerHtml = `
+                <div style="position: relative; text-align: center;">
+                    <div style="
+                        background: ${color}; 
+                        width: ${iconSize[0]}px; 
+                        height: ${iconSize[1]}px; 
+                        border-radius: 50%; 
+                        border: 2px solid white;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: ${markerSize === 'small' ? '8px' : markerSize === 'medium' ? '10px' : '12px'};
+                        font-weight: bold;
+                    ">${item.count}</div>
+                    <div style="
+                        position: absolute;
+                        top: -22px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(0,0,0,0.8);
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                        font-size: 10px;
+                        white-space: nowrap;
+                        font-weight: bold;
+                        border: 1px solid white;
+                    ">${item.postalCode}</div>
+                </div>
+            `;
             
             const customIcon = L.divIcon({
                 html: markerHtml,
                 className: 'custom-div-icon',
-                iconSize: markerSize === 'small' ? [15, 15] : markerSize === 'medium' ? [25, 25] : [35, 35],
-                iconAnchor: markerSize === 'small' ? [7, 7] : markerSize === 'medium' ? [12, 12] : [17, 17]
+                iconSize: [iconSize[0] + 10, iconSize[1] + 25], // Extra space for label
+                iconAnchor: [anchorPoint[0] + 5, anchorPoint[1] + 12] // Adjust for label
             });
 
             // Create marker
             const marker = L.marker(coords, { icon: customIcon });
             
             // Add popup with postal code information
-            marker.bindPopup(`
+            const popupContent = `
                 <div style="text-align: center;">
                     <strong>Code Postal: ${item.postalCode}</strong><br>
                     <strong>Département: ${item.department}</strong><br>
+                    ${commune ? `<strong>Commune: ${commune}</strong><br>` : ''}
                     <strong>Employés: ${item.count.toLocaleString()}</strong>
                 </div>
-            `);
+            `;
+            marker.bindPopup(popupContent);
 
             // Store marker reference
             markers.set(item.postalCode, marker);
@@ -1309,6 +1515,14 @@
             }
             
             updateDashboard();
+        });
+
+        // Toggle switch functionality
+        document.getElementById('viewToggle').addEventListener('change', (e) => {
+            userViewPreference = e.target.checked ? 'postal' : 'department';
+            if (filteredData.length > 0) {
+                updateMap();
+            }
         });
     </script>
 </body>
