@@ -75,9 +75,25 @@ Your CSV file must contain at least two columns:
 | **Postal Codes** | `Code Postaux`, `CP`, `postal`, `code` | 75001, 69001, 13001 |
 | **Count Data** | `Count de Matricule Ouvrant-droit`, `Count`, `nombre`, `matricule`, `total` | 25, 18, 12 |
 
+### Optional Columns
+For enhanced precision, you can include commune information:
+
+| Column Type | Accepted Names | Example |
+|-------------|----------------|---------|
+| **Commune** | `Commune`, `commune`, `ville`, `city`, `municipality` | Paris 1er Arrondissement, Lyon |
+
 ### Supported Formats
 
-**Format 1 (Recommended):**
+**Format 1 (Recommended - with commune):**
+```csv
+Code Postaux,Commune,Count de Matricule Ouvrant-droit
+75001,Paris 1er Arrondissement,25
+75002,Paris 2e Arrondissement,18
+69001,Lyon 1er Arrondissement,12
+13001,Marseille 1er Arrondissement,30
+```
+
+**Format 2 (Original - postal code only):**
 ```csv
 Code Postaux,Count de Matricule Ouvrant-droit
 75001,25
@@ -86,22 +102,22 @@ Code Postaux,Count de Matricule Ouvrant-droit
 13001,30
 ```
 
-**Format 2 (Alternative):**
+**Format 3 (Alternative column names):**
 ```csv
-CP,Nombre
-75001,25
-75002,18
-69001,12
-13001,30
+CP,Commune,Nombre
+75001,Paris 1er Arrondissement,25
+75002,Paris 2e Arrondissement,18
+69001,Lyon 1er Arrondissement,12
+13001,Marseille 1er Arrondissement,30
 ```
 
-**Format 3 (Generic):**
+**Format 4 (Generic):**
 ```csv
-postal,total
-75001,25
-75002,18
-69001,12
-13001,30
+postal,city,total
+75001,Paris 1er Arrondissement,25
+75002,Paris 2e Arrondissement,18
+69001,Lyon 1er Arrondissement,12
+13001,Marseille 1er Arrondissement,30
 ```
 
 ### Data Requirements
@@ -110,6 +126,19 @@ postal,total
 - ✅ Header row with column names
 - ✅ Positive integer values for counts
 - ✅ UTF-8 encoding (recommended)
+
+### Why Include Commune Information?
+
+Including commune names in your CSV provides several benefits:
+
+- **🎯 Enhanced Precision**: One postal code can be shared by multiple communes (e.g., 54490 is shared by 7 communes)
+- **📍 Accurate Mapping**: Multiple communes can have the same postal code, so specifying the commune ensures precise geolocation
+- **📊 Better Analytics**: More accurate geographical distribution analysis
+- **🔄 Fallback Support**: If commune geocoding fails, the system automatically falls back to postal code-only matching
+
+**Example of postal code sharing:**
+- 54490: Piennes, Cons-la-Grandville, Ville-Houdlémont, Saulnes, Errouville, Crusnes, Gorcy
+- Each gets mapped to its specific location when commune is provided
 
 ## 🛠️ Technical Details
 
@@ -253,6 +282,25 @@ If you encounter issues or need help:
 
 Here's what your data might look like:
 
+**With commune information (recommended):**
+```csv
+Code Postaux,Commune,Count de Matricule Ouvrant-droit
+75001,Paris 1er Arrondissement,45
+75002,Paris 2e Arrondissement,32
+75003,Paris 3e Arrondissement,28
+69001,Lyon 1er Arrondissement,67
+69002,Lyon 2e Arrondissement,53
+13001,Marseille 1er Arrondissement,89
+13002,Marseille 2e Arrondissement,76
+33000,Bordeaux,34
+44000,Nantes,29
+85000,La Roche-sur-Yon,156
+54490,Piennes,25
+54490,Cons-la-Grandville,18
+54490,Saulnes,30
+```
+
+**Standard format (postal code only):**
 ```csv
 Code Postaux,Count de Matricule Ouvrant-droit
 75001,45
