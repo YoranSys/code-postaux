@@ -797,13 +797,23 @@
                 chunkedLoading: true,
                 maxClusterRadius: 50,
                 iconCreateFunction: function(cluster) {
-                    const count = cluster.getChildCount();
+                    // Calculate sum of employee counts instead of just counting markers
+                    const markers = cluster.getAllChildMarkers();
+                    let totalEmployees = 0;
+                    
+                    markers.forEach(marker => {
+                        if (marker.options && marker.options.employeeCount) {
+                            totalEmployees += marker.options.employeeCount;
+                        }
+                    });
+                    
+                    // Use total employees for sizing instead of marker count
                     let className = 'marker-cluster-small';
-                    if (count > 10) className = 'marker-cluster-medium';
-                    if (count > 50) className = 'marker-cluster-large';
+                    if (totalEmployees > 100) className = 'marker-cluster-medium';
+                    if (totalEmployees > 500) className = 'marker-cluster-large';
                     
                     return new L.DivIcon({
-                        html: '<div><span>' + count + '</span></div>',
+                        html: '<div><span>' + totalEmployees.toLocaleString() + '</span></div>',
                         className: 'marker-cluster ' + className,
                         iconSize: new L.Point(40, 40)
                     });
@@ -1170,8 +1180,11 @@
                 iconAnchor: markerSize === 'medium' ? [30, 30] : markerSize === 'large' ? [40, 40] : [50, 50]
             });
 
-            // Create marker
-            const marker = L.marker(coords, { icon: customIcon });
+            // Create marker with employee count stored for clustering
+            const marker = L.marker(coords, { 
+                icon: customIcon,
+                employeeCount: deptData.totalCount // Store employee count for clustering
+            });
             
             // Add popup with department information
             marker.bindPopup(`
@@ -1255,8 +1268,11 @@
                 iconAnchor: [anchorPoint[0] + 5, anchorPoint[1] + 12] // Adjust for label
             });
 
-            // Create marker
-            const marker = L.marker(coords, { icon: customIcon });
+            // Create marker with employee count stored for clustering
+            const marker = L.marker(coords, { 
+                icon: customIcon,
+                employeeCount: item.count // Store employee count for clustering
+            });
             
             // Add popup with postal code information
             const popupContent = `
