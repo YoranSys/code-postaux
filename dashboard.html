@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 French Postal Code Dashboard</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .upload-area {
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .upload-text {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .dashboard {
+            display: none;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .dashboard.active {
+            display: grid;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .search-container {
+            margin: 20px 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            background: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .top-codes {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .code-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .code-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .map-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 400px;
+        }
+
+        .france-map {
+            width: 100%;
+            height: auto;
+            max-height: 500px;
+        }
+
+        .department {
+            fill: #e0e0e0;
+            stroke: #333;
+            stroke-width: 0.5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .department:hover {
+            stroke-width: 2;
+            stroke: #fff;
+        }
+
+        .department.highlighted {
+            fill: #ff6b6b !important;
+            stroke: #fff;
+            stroke-width: 2;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 0.9rem;
+            z-index: 1000;
+            display: none;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+
+        .chart-title {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bar-label {
+            color: white;
+            font-size: 0.9rem;
+            min-width: 60px;
+        }
+
+        .bar {
+            height: 20px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover {
+            transform: scaleY(1.2);
+        }
+
+        .bar-value {
+            color: white;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .success-message {
+            background: rgba(0, 255, 0, 0.1);
+            color: #4CAF50;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">📊 French Postal Code Dashboard</h1>
+        
+        <!-- Upload Section -->
+        <div class="glass-panel" id="uploadSection">
+            <div class="upload-area" id="uploadArea">
+                <span class="upload-icon">📂</span>
+                <div class="upload-text">Glissez-déposez votre fichier CSV ici</div>
+                <div class="upload-text">ou</div>
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    📂 Choisir un fichier CSV
+                </button>
+                <input type="file" id="fileInput" accept=".csv" />
+            </div>
+            <div id="messageContainer"></div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="dashboard" id="dashboard">
+            <!-- Left Panel -->
+            <div>
+                <!-- Statistics -->
+                <div class="glass-panel">
+                    <h2 style="color: white; margin-bottom: 20px; text-align: center;">📊 Statistiques</h2>
+                    <div class="stats-panel">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalCodes">0</div>
+                            <div class="stat-label">Codes Postaux</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalEmployees">0</div>
+                            <div class="stat-label">Total Employés</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="averagePerCode">0</div>
+                            <div class="stat-label">Moyenne par Code</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="maxValue">0</div>
+                            <div class="stat-label">Maximum</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Top Codes -->
+                <div class="glass-panel">
+                    <h2 style="color: white; margin-bottom: 15px; text-align: center;">🔍 Recherche & Top 10</h2>
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="searchInput" placeholder="Rechercher un code postal...">
+                    </div>
+                    <div class="top-codes" id="topCodes"></div>
+                </div>
+
+                <!-- Bar Chart -->
+                <div class="glass-panel">
+                    <div class="chart-container">
+                        <div class="chart-title">📊 Top 15 Départements</div>
+                        <div class="bar-chart" id="barChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Map -->
+            <div class="glass-panel">
+                <h2 style="color: white; margin-bottom: 20px; text-align: center;">🗺️ Carte de France</h2>
+                <div class="map-container">
+                    <svg class="france-map" id="franceMap" viewBox="0 0 800 600">
+                        <!-- Simplified France departments SVG with more realistic positioning -->
+                        <g id="departments">
+                            <!-- Île-de-France region -->
+                            <path class="department" d="M380,180 L420,180 L420,220 L380,220 Z" data-dept="75" data-name="Paris"></path>
+                            <path class="department" d="M340,160 L380,160 L380,200 L340,200 Z" data-dept="78" data-name="Yvelines"></path>
+                            <path class="department" d="M380,160 L420,160 L420,180 L380,180 Z" data-dept="95" data-name="Val-d'Oise"></path>
+                            <path class="department" d="M420,160 L460,160 L460,200 L420,200 Z" data-dept="77" data-name="Seine-et-Marne"></path>
+                            
+                            <!-- Rhône-Alpes region -->
+                            <path class="department" d="M480,320 L520,320 L520,360 L480,360 Z" data-dept="69" data-name="Rhône"></path>
+                            <path class="department" d="M520,300 L560,300 L560,340 L520,340 Z" data-dept="38" data-name="Isère"></path>
+                            <path class="department" d="M560,280 L600,280 L600,320 L560,320 Z" data-dept="73" data-name="Savoie"></path>
+                            <path class="department" d="M580,240 L620,240 L620,280 L580,280 Z" data-dept="74" data-name="Haute-Savoie"></path>
+                            
+                            <!-- PACA region -->
+                            <path class="department" d="M520,420 L580,420 L580,480 L520,480 Z" data-dept="13" data-name="Bouches-du-Rhône"></path>
+                            <path class="department" d="M580,400 L640,400 L640,460 L580,460 Z" data-dept="06" data-name="Alpes-Maritimes"></path>
+                            <path class="department" d="M480,440 L520,440 L520,480 L480,480 Z" data-dept="84" data-name="Vaucluse"></path>
+                            
+                            <!-- Aquitaine region -->
+                            <path class="department" d="M220,380 L280,380 L280,440 L220,440 Z" data-dept="33" data-name="Gironde"></path>
+                            <path class="department" d="M160,420 L220,420 L220,480 L160,480 Z" data-dept="40" data-name="Landes"></path>
+                            <path class="department" d="M220,440 L280,440 L280,500 L220,500 Z" data-dept="24" data-name="Dordogne"></path>
+                            
+                            <!-- Pays de la Loire region -->
+                            <path class="department" d="M260,240 L320,240 L320,300 L260,300 Z" data-dept="44" data-name="Loire-Atlantique"></path>
+                            <path class="department" d="M200,220 L260,220 L260,280 L200,280 Z" data-dept="85" data-name="Vendée"></path>
+                            <path class="department" d="M320,200 L380,200 L380,260 L320,260 Z" data-dept="49" data-name="Maine-et-Loire"></path>
+                            
+                            <!-- Nord-Pas-de-Calais region -->
+                            <path class="department" d="M340,60 L400,60 L400,120 L340,120 Z" data-dept="59" data-name="Nord"></path>
+                            <path class="department" d="M280,80 L340,80 L340,140 L280,140 Z" data-dept="62" data-name="Pas-de-Calais"></path>
+                            
+                            <!-- Languedoc-Roussillon region -->
+                            <path class="department" d="M360,440 L420,440 L420,500 L360,500 Z" data-dept="34" data-name="Hérault"></path>
+                            <path class="department" d="M300,460 L360,460 L360,520 L300,520 Z" data-dept="11" data-name="Aude"></path>
+                            <path class="department" d="M260,480 L320,480 L320,540 L260,540 Z" data-dept="66" data-name="Pyrénées-Orientales"></path>
+                            
+                            <!-- Midi-Pyrénées region -->
+                            <path class="department" d="M320,360 L380,360 L380,420 L320,420 Z" data-dept="31" data-name="Haute-Garonne"></path>
+                            <path class="department" d="M280,340 L340,340 L340,400 L280,400 Z" data-dept="32" data-name="Gers"></path>
+                            
+                            <!-- Other major departments -->
+                            <path class="department" d="M440,240 L500,240 L500,300 L440,300 Z" data-dept="21" data-name="Côte-d'Or"></path>
+                            <path class="department" d="M400,280 L460,280 L460,340 L400,340 Z" data-dept="42" data-name="Loire"></path>
+                            <path class="department" d="M340,120 L400,120 L400,180 L340,180 Z" data-dept="02" data-name="Aisne"></path>
+                            <path class="department" d="M400,120 L460,120 L460,180 L400,180 Z" data-dept="51" data-name="Marne"></path>
+                            <path class="department" d="M460,180 L520,180 L520,240 L460,240 Z" data-dept="54" data-name="Meurthe-et-Moselle"></path>
+                            <path class="department" d="M520,160 L580,160 L580,220 L520,220 Z" data-dept="67" data-name="Bas-Rhin"></path>
+                            <path class="department" d="M540,220 L600,220 L600,280 L540,280 Z" data-dept="68" data-name="Haut-Rhin"></path>
+                        </g>
+                    </svg>
+                    <div class="tooltip" id="tooltip"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple CSV parser to replace PapaParse
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) {
+                return { data: [], errors: ['CSV file must have at least a header and one data row'] };
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const data = [];
+            const errors = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                
+                if (values.length !== headers.length) {
+                    errors.push(`Row ${i + 1} has ${values.length} columns, expected ${headers.length}`);
+                    continue;
+                }
+
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+                data.push(row);
+            }
+
+            return { data, errors };
+        }
+
+        let postalData = [];
+        let filteredData = [];
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const messageContainer = document.getElementById('messageContainer');
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function showMessage(message, type = 'error') {
+            messageContainer.innerHTML = `<div class="${type}-message">${message}</div>`;
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showMessage('❌ Veuillez sélectionner un fichier CSV valide.');
+                return;
+            }
+
+            showMessage('📊 Analyse du fichier en cours...', 'success');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csvText = e.target.result;
+                const results = parseCSV(csvText);
+                
+                if (results.errors.length > 0) {
+                    showMessage('❌ Erreur lors de l\'analyse du fichier CSV: ' + results.errors[0]);
+                    return;
+                }
+                
+                processCSVData(results.data);
+            };
+            
+            reader.onerror = function() {
+                showMessage('❌ Erreur lors de la lecture du fichier.');
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function processCSVData(data) {
+            // Detect column names
+            const headers = Object.keys(data[0] || {});
+            
+            const postalCodeColumns = ['Code Postaux', 'CP', 'postal', 'code'];
+            const countColumns = ['Count de Matricule Ouvrant-droit', 'Count', 'nombre', 'matricule', 'total'];
+            
+            let postalCodeCol = null;
+            let countCol = null;
+
+            // Find matching columns
+            for (const header of headers) {
+                if (postalCodeColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                    postalCodeCol = header;
+                }
+                if (countColumns.some(col => header.toLowerCase().includes(col.toLowerCase()) || col.toLowerCase().includes(header.toLowerCase()))) {
+                    countCol = header;
+                }
+            }
+
+            if (!postalCodeCol || !countCol) {
+                showMessage('❌ Colonnes requises non trouvées. Vérifiez que votre CSV contient les colonnes de codes postaux et de comptage.');
+                return;
+            }
+
+            // Process and validate data
+            postalData = data.map(row => ({
+                postalCode: row[postalCodeCol],
+                count: parseInt(row[countCol]) || 0,
+                department: row[postalCodeCol] ? row[postalCodeCol].substring(0, 2) : ''
+            })).filter(item => {
+                return item.postalCode && 
+                       item.postalCode.length === 5 && 
+                       /^\d{5}$/.test(item.postalCode) &&
+                       item.count > 0;
+            });
+
+            if (postalData.length === 0) {
+                showMessage('❌ Aucune donnée valide trouvée. Vérifiez le format de vos codes postaux.');
+                return;
+            }
+
+            filteredData = [...postalData];
+            showMessage(`✅ ${postalData.length} codes postaux chargés avec succès!`, 'success');
+            
+            // Show dashboard
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            updateStatistics();
+            updateTopCodes();
+            updateBarChart();
+            updateMap();
+        }
+
+        function updateStatistics() {
+            const totalCodes = filteredData.length;
+            const totalEmployees = filteredData.reduce((sum, item) => sum + item.count, 0);
+            const averagePerCode = totalCodes > 0 ? Math.round(totalEmployees / totalCodes) : 0;
+            const maxValue = Math.max(...filteredData.map(item => item.count));
+
+            document.getElementById('totalCodes').textContent = totalCodes.toLocaleString();
+            document.getElementById('totalEmployees').textContent = totalEmployees.toLocaleString();
+            document.getElementById('averagePerCode').textContent = averagePerCode.toLocaleString();
+            document.getElementById('maxValue').textContent = maxValue.toLocaleString();
+        }
+
+        function updateTopCodes() {
+            const sorted = [...filteredData].sort((a, b) => b.count - a.count).slice(0, 10);
+            const topCodesContainer = document.getElementById('topCodes');
+            
+            topCodesContainer.innerHTML = sorted.map((item, index) => 
+                `<div class="code-item" onclick="highlightPostalCode('${item.postalCode}')">
+                    <span>#${index + 1} ${item.postalCode}</span>
+                    <span>${item.count.toLocaleString()}</span>
+                </div>`
+            ).join('');
+        }
+
+        function updateBarChart() {
+            // Group by department
+            const deptData = {};
+            filteredData.forEach(item => {
+                if (!deptData[item.department]) {
+                    deptData[item.department] = 0;
+                }
+                deptData[item.department] += item.count;
+            });
+
+            // Sort and take top 15
+            const sortedDepts = Object.entries(deptData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 15);
+
+            const maxValue = Math.max(...sortedDepts.map(([,count]) => count));
+            const barChart = document.getElementById('barChart');
+
+            barChart.innerHTML = sortedDepts.map(([dept, count]) => {
+                const width = (count / maxValue) * 100;
+                return `
+                    <div class="bar-item">
+                        <div class="bar-label">${dept}</div>
+                        <div class="bar" style="width: ${width}%"></div>
+                        <div class="bar-value">${count.toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateMap() {
+            // Calculate department intensities
+            const deptData = {};
+            filteredData.forEach(item => {
+                if (!deptData[item.department]) {
+                    deptData[item.department] = 0;
+                }
+                deptData[item.department] += item.count;
+            });
+
+            const maxCount = Math.max(...Object.values(deptData));
+            
+            // Update department colors based on data intensity
+            document.querySelectorAll('.department').forEach(dept => {
+                const deptCode = dept.getAttribute('data-dept');
+                const count = deptData[deptCode] || 0;
+                const intensity = count / maxCount;
+                
+                // Color scale from light blue to dark blue
+                const blue = Math.floor(50 + intensity * 150);
+                dept.style.fill = `rgb(102, 126, ${blue})`;
+            });
+        }
+
+        function highlightPostalCode(postalCode) {
+            const department = postalCode.substring(0, 2);
+            
+            // Remove previous highlights
+            document.querySelectorAll('.department').forEach(dept => {
+                dept.classList.remove('highlighted');
+            });
+            
+            // Highlight the department
+            const deptElement = document.querySelector(`[data-dept="${department}"]`);
+            if (deptElement) {
+                deptElement.classList.add('highlighted');
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredData = [...postalData];
+            } else {
+                filteredData = postalData.filter(item => 
+                    item.postalCode.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            updateDashboard();
+        });
+
+        // Tooltip functionality
+        const tooltip = document.getElementById('tooltip');
+
+        document.querySelectorAll('.department').forEach(dept => {
+            dept.addEventListener('mouseenter', (e) => {
+                const deptName = dept.getAttribute('data-name');
+                const deptCode = dept.getAttribute('data-dept');
+                
+                // Calculate department data
+                const deptEmployees = filteredData
+                    .filter(item => item.department === deptCode)
+                    .reduce((sum, item) => sum + item.count, 0);
+                
+                tooltip.innerHTML = `
+                    <strong>${deptName} (${deptCode})</strong><br>
+                    Employés: ${deptEmployees.toLocaleString()}
+                `;
+                tooltip.style.display = 'block';
+            });
+
+            dept.addEventListener('mousemove', (e) => {
+                tooltip.style.left = e.pageX + 10 + 'px';
+                tooltip.style.top = e.pageY + 10 + 'px';
+            });
+
+            dept.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
