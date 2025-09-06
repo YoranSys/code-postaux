@@ -360,6 +360,69 @@
                 font-size: 2rem;
             }
         }
+
+        /* Custom marker styles */
+        .custom-marker {
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.2);
+        }
+
+        .marker-highlighted {
+            border-color: #ff0000 !important;
+            border-width: 3px !important;
+            animation: pulse 2s infinite;
+        }
+
+        .department-marker {
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .department-marker:hover {
+            transform: scale(1.1);
+        }
+
+        .marker-count {
+            font-size: 0.8em;
+            line-height: 1;
+        }
+
+        .marker-dept {
+            font-size: 0.6em;
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        .marker-xlarge .marker-count {
+            font-size: 1em;
+        }
+
+        .marker-xlarge .marker-dept {
+            font-size: 0.7em;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -551,6 +614,8 @@
         let markersCluster = null;
         let markers = new Map();
         let highlightedMarker = null;
+        let communesLayer = null;
+        let isLoadingCommunes = false;
 
         // Simple CSV parser to replace PapaParse
         function parseCSV(csvText) {
@@ -639,6 +704,23 @@
             });
 
             map.addLayer(markersCluster);
+
+            // Add zoom event listener to update clustering behavior
+            map.on('zoomend', function() {
+                if (filteredData.length > 0) {
+                    updateMap();
+                }
+                
+                // Load commune boundaries when zoomed in far enough
+                const currentZoom = map.getZoom();
+                if (currentZoom >= 10 && !communesLayer && !isLoadingCommunes) {
+                    loadCommunesBoundaries();
+                } else if (currentZoom < 10 && communesLayer) {
+                    // Remove commune boundaries when zoomed out
+                    map.removeLayer(communesLayer);
+                    communesLayer = null;
+                }
+            });
         }
 
         // Initialize map when DOM is loaded
@@ -760,7 +842,13 @@
             document.getElementById('uploadSection').style.display = 'none';
             document.getElementById('dashboard').classList.add('active');
             
-            updateDashboard();
+            // Fix map loading issue by invalidating size after dashboard becomes visible
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                }
+                updateDashboard();
+            }, 100);
         }
 
         function updateDashboard() {
@@ -831,6 +919,46 @@
 
             if (filteredData.length === 0) return;
 
+            const currentZoom = map.getZoom();
+            
+            // Use department clustering for zoom levels < 8, postal codes for zoom >= 8
+            if (currentZoom < 8) {
+                updateMapWithDepartmentClustering();
+            } else {
+                updateMapWithPostalCodes();
+            }
+        }
+
+        function updateMapWithDepartmentClustering() {
+            // Group data by department and sum employee counts
+            const departmentData = {};
+            filteredData.forEach(item => {
+                if (!departmentData[item.department]) {
+                    departmentData[item.department] = {
+                        department: item.department,
+                        totalCount: 0,
+                        postalCodes: []
+                    };
+                }
+                departmentData[item.department].totalCount += item.count;
+                departmentData[item.department].postalCodes.push(item.postalCode);
+            });
+
+            // Calculate intensity scale for departments
+            const deptCounts = Object.values(departmentData).map(d => d.totalCount);
+            const maxCount = Math.max(...deptCounts);
+            const minCount = Math.min(...deptCounts);
+
+            // Add department markers
+            Object.values(departmentData).forEach(deptData => {
+                const deptCoords = getDepartmentCenter(deptData.department);
+                if (deptCoords) {
+                    addDepartmentMarkerToMap(deptData, deptCoords, maxCount, minCount);
+                }
+            });
+        }
+
+        function updateMapWithPostalCodes() {
             // Calculate intensity scale
             const maxCount = Math.max(...filteredData.map(item => item.count));
             const minCount = Math.min(...filteredData.map(item => item.count));
@@ -843,12 +971,64 @@
                     const deptCode = item.department;
                     const deptCoords = getDepartmentCenter(deptCode);
                     if (deptCoords) {
-                        addMarkerToMap(item, deptCoords, maxCount, minCount);
+                        // Add some random offset for multiple postal codes in same department
+                        const offsetCoords = [
+                            deptCoords[0] + (Math.random() - 0.5) * 0.1,
+                            deptCoords[1] + (Math.random() - 0.5) * 0.1
+                        ];
+                        addMarkerToMap(item, offsetCoords, maxCount, minCount);
                     }
                 } else {
                     addMarkerToMap(item, coords, maxCount, minCount);
                 }
             });
+        }
+
+        function addDepartmentMarkerToMap(deptData, coords, maxCount, minCount) {
+            // Calculate marker size and color based on total employee count in department
+            const intensity = (deptData.totalCount - minCount) / (maxCount - minCount);
+            
+            // Determine marker size (larger for departments)
+            let markerSize;
+            if (intensity < 0.33) markerSize = 'medium';
+            else if (intensity < 0.66) markerSize = 'large';
+            else markerSize = 'xlarge';
+
+            // Create department marker with count display
+            const markerHtml = `
+                <div class="department-marker marker-${markerSize}" style="background: hsl(${240 + intensity * 60}, 70%, ${50 + intensity * 20}%);">
+                    <div class="marker-count">${deptData.totalCount}</div>
+                    <div class="marker-dept">${deptData.department}</div>
+                </div>
+            `;
+            
+            const customIcon = L.divIcon({
+                html: markerHtml,
+                className: 'custom-div-icon department-div-icon',
+                iconSize: markerSize === 'medium' ? [60, 60] : markerSize === 'large' ? [80, 80] : [100, 100],
+                iconAnchor: markerSize === 'medium' ? [30, 30] : markerSize === 'large' ? [40, 40] : [50, 50]
+            });
+
+            // Create marker
+            const marker = L.marker(coords, { icon: customIcon });
+            
+            // Add popup with department information
+            marker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>Département: ${deptData.department}</strong><br>
+                    <strong>Total Employés: ${deptData.totalCount.toLocaleString()}</strong><br>
+                    <strong>Codes Postaux: ${deptData.postalCodes.length}</strong><br>
+                    <div style="font-size: 0.9em; margin-top: 5px;">
+                        ${deptData.postalCodes.slice(0, 5).join(', ')}${deptData.postalCodes.length > 5 ? '...' : ''}
+                    </div>
+                </div>
+            `);
+
+            // Store marker reference with department key
+            markers.set(`dept_${deptData.department}`, marker);
+            
+            // Add to cluster group
+            markersCluster.addLayer(marker);
         }
 
         function addMarkerToMap(item, coords, maxCount, minCount) {
@@ -990,6 +1170,97 @@
             };
             
             return deptCenters[deptCode] || null;
+        }
+
+        // Function to load French commune boundaries for detailed view
+        function loadCommunesBoundaries() {
+            if (isLoadingCommunes) return;
+            isLoadingCommunes = true;
+            
+            // Use the French government's geo API for commune boundaries
+            // This loads a simplified version for performance
+            const bounds = map.getBounds();
+            const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+            
+            fetch(`https://geo.api.gouv.fr/communes?format=geojson&geometry=contour&boost=population&limit=100`)
+                .then(response => response.json())
+                .then(data => {
+                    if (communesLayer) {
+                        map.removeLayer(communesLayer);
+                    }
+                    
+                    communesLayer = L.geoJSON(data, {
+                        style: function(feature) {
+                            // Find matching postal data for this commune
+                            const communePostalCodes = feature.properties.codesPostaux || [];
+                            const matchingData = filteredData.filter(item => 
+                                communePostalCodes.includes(item.postalCode)
+                            );
+                            
+                            const totalEmployees = matchingData.reduce((sum, item) => sum + item.count, 0);
+                            
+                            // Color based on employee density
+                            const intensity = totalEmployees > 0 ? Math.min(totalEmployees / 100, 1) : 0;
+                            
+                            return {
+                                fillColor: getColor(intensity),
+                                weight: 1,
+                                opacity: 0.8,
+                                color: 'white',
+                                fillOpacity: intensity > 0 ? 0.6 : 0.1
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            const communePostalCodes = feature.properties.codesPostaux || [];
+                            const matchingData = filteredData.filter(item => 
+                                communePostalCodes.includes(item.postalCode)
+                            );
+                            const totalEmployees = matchingData.reduce((sum, item) => sum + item.count, 0);
+                            
+                            layer.bindPopup(`
+                                <div style="text-align: center;">
+                                    <strong>${feature.properties.nom}</strong><br>
+                                    <strong>Code commune: ${feature.properties.code}</strong><br>
+                                    <strong>Codes postaux: ${communePostalCodes.join(', ') || 'N/A'}</strong><br>
+                                    <strong>Employés: ${totalEmployees.toLocaleString()}</strong>
+                                </div>
+                            `);
+                            
+                            layer.on('mouseover', function() {
+                                layer.setStyle({
+                                    weight: 3,
+                                    color: '#666',
+                                    fillOpacity: 0.8
+                                });
+                            });
+                            
+                            layer.on('mouseout', function() {
+                                communesLayer.resetStyle(layer);
+                            });
+                        }
+                    });
+                    
+                    // Add communes layer below markers
+                    map.addLayer(communesLayer);
+                    communesLayer.bringToBack();
+                })
+                .catch(error => {
+                    console.warn('Could not load commune boundaries:', error);
+                })
+                .finally(() => {
+                    isLoadingCommunes = false;
+                });
+        }
+
+        // Color scale for commune choropleth
+        function getColor(intensity) {
+            return intensity > 0.8 ? '#800026' :
+                   intensity > 0.6 ? '#BD0026' :
+                   intensity > 0.4 ? '#E31A1C' :
+                   intensity > 0.2 ? '#FC4E2A' :
+                   intensity > 0.1 ? '#FD8D3C' :
+                   intensity > 0 ? '#FEB24C' :
+                                   '#FFEDA0';
         }
 
         function highlightPostalCode(postalCode) {
