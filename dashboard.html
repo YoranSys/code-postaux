@@ -1222,29 +1222,27 @@
         }
 
         function addDepartmentMarkerToMap(deptData, coords, maxCount, minCount) {
-            // Calculate marker size and color based on total employee count in department
-            const intensity = (deptData.totalCount - minCount) / (maxCount - minCount);
-            
-            // Enhanced department marker sizing with more tiers for better visibility
+            // Use SAME sizing logic as clusters for consistency
             let markerSize, iconSize;
-            if (intensity < 0.2) {
+            if (deptData.totalCount <= 50) {
+                markerSize = 'small';
+                iconSize = [35, 35]; // Same as marker-cluster-small
+            } else if (deptData.totalCount <= 200) {
                 markerSize = 'medium';
-                iconSize = [70, 70];
-            } else if (intensity < 0.4) {
+                iconSize = [50, 50]; // Same as marker-cluster-medium
+            } else if (deptData.totalCount <= 500) {
                 markerSize = 'large';
-                iconSize = [90, 90];
-            } else if (intensity < 0.7) {
-                markerSize = 'xlarge';
-                iconSize = [110, 110];
+                iconSize = [65, 65]; // Same as marker-cluster-large
             } else {
-                markerSize = 'xxlarge';
-                iconSize = [130, 130];
+                markerSize = 'xlarge';
+                iconSize = [85, 85]; // Same as marker-cluster-xlarge
             }
 
-            // Create department marker with count display
+            // Create department marker with SAME styling as clusters
             const markerHtml = `
                 <div class="department-marker marker-${markerSize}" style="
-                    background: hsl(${240 + intensity * 60}, 70%, ${50 + intensity * 20}%);
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    border: 3px solid rgba(255, 255, 255, 0.8);
                     width: ${iconSize[0]}px;
                     height: ${iconSize[1]}px;
                 ">
@@ -1286,48 +1284,47 @@
         }
 
         function addMarkerToMap(item, coords, maxCount, minCount, commune = null) {
-            // Calculate marker size and color based on employee count
+            // Calculate marker size and color based on employee count using same logic as clusters
             const intensity = (item.count - minCount) / (maxCount - minCount);
             
-            // Enhanced postal code marker sizing with more tiers
+            // Use SAME sizing logic as clusters for consistency
             let markerSize;
             let iconSize, anchorPoint, fontSize, labelPadding;
-            if (intensity < 0.2) {
+            if (item.count <= 50) {
                 markerSize = 'small';
-                iconSize = [25, 25];
-                anchorPoint = [12, 12];
-                fontSize = '9px';
-                labelPadding = '3px 7px';
-            } else if (intensity < 0.4) {
-                markerSize = 'medium';
-                iconSize = [35, 35];
+                iconSize = [35, 35]; // Same as marker-cluster-small
                 anchorPoint = [17, 17];
                 fontSize = '11px';
-                labelPadding = '4px 8px';
-            } else if (intensity < 0.7) {
-                markerSize = 'large';
-                iconSize = [45, 45];
-                anchorPoint = [22, 22];
+                labelPadding = '3px 7px';
+            } else if (item.count <= 200) {
+                markerSize = 'medium';
+                iconSize = [50, 50]; // Same as marker-cluster-medium
+                anchorPoint = [25, 25];
                 fontSize = '13px';
+                labelPadding = '4px 8px';
+            } else if (item.count <= 500) {
+                markerSize = 'large';
+                iconSize = [65, 65]; // Same as marker-cluster-large
+                anchorPoint = [32, 32];
+                fontSize = '15px';
                 labelPadding = '5px 9px';
             } else {
                 markerSize = 'xlarge';
-                iconSize = [55, 55];
-                anchorPoint = [27, 27];
-                fontSize = '15px';
+                iconSize = [85, 85]; // Same as marker-cluster-xlarge
+                anchorPoint = [42, 42];
+                fontSize = '17px';
                 labelPadding = '6px 10px';
             }
 
-            // Create custom marker icon with visible postal code
-            const color = `hsl(${240 + intensity * 60}, 70%, ${50 + intensity * 20}%)`;
+            // Use SAME background gradient as clusters
             const markerHtml = `
                 <div style="position: relative; text-align: center;">
                     <div style="
-                        background: ${color}; 
+                        background: linear-gradient(135deg, #667eea, #764ba2); 
                         width: ${iconSize[0]}px; 
                         height: ${iconSize[1]}px; 
                         border-radius: 50%; 
-                        border: 2px solid white;
+                        border: 3px solid rgba(255, 255, 255, 0.8);
                         box-shadow: 0 2px 5px rgba(0,0,0,0.3);
                         display: flex;
                         align-items: center;
