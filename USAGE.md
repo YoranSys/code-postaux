@@ -7,14 +7,43 @@
    - No installation required - it's a single-file application
 
 2. **Upload Your Data**
-   - Drag and drop a CSV file onto the upload area, OR
-   - Click "📂 Choisir un fichier CSV" to browse for a file
+   - Drag and drop one or multiple CSV files onto the upload area, OR
+   - Click "📂 Choisir un/des fichier(s) CSV" to browse and select multiple files
 
-3. **Explore Your Data**
-   - View statistics in the left panel
-   - Use the search box to filter postal codes
+3. **Manage Multiple Files** (New Feature!)
+   - Use the file management panel to control each file individually
+   - Toggle file visibility with 👁️/🚫 buttons 
+   - Remove files with 🗑️ buttons
+   - Add more files anytime with "➕ Ajouter un autre fichier"
+
+4. **Explore Your Data**
+   - View combined statistics from all visible files in the left panel
+   - Each file appears in a different color on the map
+   - Use the map legend to identify which file each marker represents
+   - Use the search box to filter postal codes across all visible files
    - Click on top postal codes to highlight them on the map
    - Hover over map departments for details
+
+## 🎨 Multi-File Features
+
+### Automatic Color Assignment
+Each uploaded file gets a unique color for easy identification:
+- **File 1**: Blue (#667eea)
+- **File 2**: Red (#e74c3c) 
+- **File 3**: Green (#27ae60)
+- **File 4**: Orange (#f39c12)
+- **And more colors for additional files...**
+
+### File Management Panel
+- **Individual Controls**: Show/hide each file independently
+- **File Statistics**: See postal codes count and employee total per file  
+- **Color Indicators**: Visual circles show each file's map color
+- **Bulk Actions**: Add more files or clear all at once
+
+### Interactive Map Legend
+- **Auto-appears**: Shows when multiple files are visible
+- **Color Reference**: Links file names to their map colors
+- **Live Updates**: Changes as you show/hide files
 
 ## CSV Format Requirements
 

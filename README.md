@@ -1,16 +1,24 @@
 # 📊 French Postal Code Dashboard
 
-An interactive web-based dashboard for analyzing French postal code data with beautiful visualizations, statistics, and an interactive map.
+An interactive web-based dashboard for analyzing French postal code data with beautiful visualizations, statistics, and an interactive map. **Now supports multiple CSV files with different colored markers for data comparison and overlay!**
 
-![Dashboard Preview](https://via.placeholder.com/800x400/667eea/ffffff?text=Dashboard+Preview)
+![Multi-file Dashboard](https://github.com/user-attachments/assets/75577a97-6080-405a-9d54-21a7605412ec)
 
 ## ✨ Features
 
-### 📁 **File Upload System**
-- **Drag & Drop** CSV files directly onto the interface
-- **Click to browse** file selection
+### 📁 **Multi-File Upload System**
+- **Drag & Drop** multiple CSV files directly onto the interface
+- **Click to browse** for multiple file selection
 - **Real-time validation** with user-friendly error messages
 - **Flexible CSV format support** - automatically detects column headers
+- **Individual file management** - show/hide/delete files independently
+
+### 🎨 **Multi-File Visualization**
+- **Color-coded markers** - each file gets a unique color on the map
+- **Interactive legend** showing active files and their colors
+- **File overlay capability** - visualize multiple datasets simultaneously
+- **Individual file controls** - toggle visibility without losing data
+- **Combined statistics** from all visible files
 
 ### 🗺️ **Interactive Map of France**
 - **Color-coded departments** based on employee/data intensity
@@ -56,14 +64,19 @@ An interactive web-based dashboard for analyzing French postal code data with be
 ### Usage
 
 1. **Launch the dashboard** by opening the HTML file in your web browser
-2. **Upload your CSV file** using one of these methods:
-   - Drag and drop the CSV file onto the upload area
-   - Click "📂 Choisir un fichier CSV" to browse and select
-3. **View the analysis** - the dashboard will automatically process and display your data
-4. **Interact with the visualizations**:
+2. **Upload your CSV file(s)** using one of these methods:
+   - Drag and drop one or multiple CSV files onto the upload area
+   - Click "📂 Choisir un/des fichier(s) CSV" to browse and select multiple files
+3. **Manage your files** in the file management panel:
+   - Toggle file visibility with the 👁️/🚫 buttons
+   - Remove individual files with the 🗑️ button
+   - Add more files with "➕ Ajouter un autre fichier"
+4. **View the analysis** - the dashboard will automatically process and display your combined data
+5. **Interact with the visualizations**:
    - Hover over map departments for details
-   - Search postal codes in real-time
+   - Search postal codes across all visible files in real-time
    - Click on top postal codes to highlight on map
+   - Use the map legend to identify which file each marker represents
 
 ## 📋 CSV Format Requirements
 
@@ -264,19 +277,20 @@ If you encounter issues or need help:
 ## 🎯 Use Cases
 
 ### Business Analytics
-- **Employee distribution** analysis by region
-- **Regional performance** tracking
-- **Geographic insights** for business planning
+- **Employee distribution** analysis by region across multiple divisions/departments
+- **Regional performance** tracking and comparison between different datasets
+- **Geographic insights** for business planning with data overlay capabilities
+- **Multi-year comparison** by loading different time periods as separate files
 
 ### Research & Education
-- **Demographic studies** using postal code data
-- **Geographic data visualization** projects
-- **Statistical analysis** teaching tool
+- **Demographic studies** using multiple postal code datasets
+- **Geographic data visualization** projects with comparative analysis
+- **Statistical analysis** teaching tool with multi-dataset support
 
 ### Government & Public Sector
-- **Population distribution** analysis
-- **Resource allocation** planning
-- **Public service** optimization
+- **Population distribution** analysis across different demographics
+- **Resource allocation** planning with multiple data sources
+- **Public service** optimization using overlaid datasets
 
 ## 📊 Sample Data Structure
 
@@ -318,13 +332,14 @@ Code Postaux,Count de Matricule Ouvrant-droit
 ## 🔮 Future Enhancements
 
 Potential features for future versions:
-- **Export functionality** (PDF, PNG, CSV)
-- **Multiple file comparison** support
-- **Time-series analysis** for historical data
-- **Advanced filtering** options
-- **Custom map regions** selection
-- **API integration** for real-time data
+- **Export functionality** (PDF, PNG, CSV) for multi-file datasets
+- **File comparison tools** with side-by-side statistics
+- **Time-series analysis** for historical data comparison
+- **Advanced filtering** options per file
+- **Custom color schemes** for file differentiation
+- **File merging capabilities** for data consolidation
+- **API integration** for real-time data from multiple sources
 
 ---
 
-**Made with ❤️ for French postal code analysis**
+**Made with ❤️ for French postal code analysis - Now with multi-file support!**
