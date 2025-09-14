@@ -1039,16 +1039,27 @@
                             totalEmployees += marker.options.employeeCount;
                             
                             const fileId = marker.options.fileId;
-                            if (fileId !== undefined) {
+                            if (fileId !== undefined && fileId !== null) {
                                 if (!fileComposition.has(fileId)) {
                                     const settings = fileSettings.get(fileId);
                                     fileComposition.set(fileId, {
                                         count: 0,
                                         color: settings ? settings.color : '#667eea',
-                                        name: settings ? settings.name : 'Unknown'
+                                        name: settings ? settings.name : 'Unknown file'
                                     });
                                 }
                                 fileComposition.get(fileId).count += marker.options.employeeCount;
+                            } else {
+                                // Handle department markers or markers without file ID
+                                const departmentId = 'mixed_department';
+                                if (!fileComposition.has(departmentId)) {
+                                    fileComposition.set(departmentId, {
+                                        count: 0,
+                                        color: '#667eea',
+                                        name: 'Department data'
+                                    });
+                                }
+                                fileComposition.get(departmentId).count += marker.options.employeeCount;
                             }
                         }
                     });
