@@ -697,6 +697,16 @@
             border: 2px solid white;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
+
+        /* Custom marker cluster styles */
+        .marker-cluster-custom {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .marker-cluster-custom:hover {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -1019,13 +1029,38 @@
                 chunkedLoading: true,
                 maxClusterRadius: 50,
                 iconCreateFunction: function(cluster) {
-                    // Calculate sum of employee counts instead of just counting markers
+                    // Calculate sum of employee counts and analyze file composition
                     const markers = cluster.getAllChildMarkers();
                     let totalEmployees = 0;
+                    const fileComposition = new Map(); // fileId -> {count, color, name}
                     
                     markers.forEach(marker => {
                         if (marker.options && marker.options.employeeCount) {
                             totalEmployees += marker.options.employeeCount;
+                            
+                            const fileId = marker.options.fileId;
+                            if (fileId !== undefined && fileId !== null) {
+                                if (!fileComposition.has(fileId)) {
+                                    const settings = fileSettings.get(fileId);
+                                    fileComposition.set(fileId, {
+                                        count: 0,
+                                        color: settings ? settings.color : '#667eea',
+                                        name: settings ? settings.name : 'Unknown file'
+                                    });
+                                }
+                                fileComposition.get(fileId).count += marker.options.employeeCount;
+                            } else {
+                                // Handle department markers or markers without file ID
+                                const departmentId = 'mixed_department';
+                                if (!fileComposition.has(departmentId)) {
+                                    fileComposition.set(departmentId, {
+                                        count: 0,
+                                        color: '#667eea',
+                                        name: 'Department data'
+                                    });
+                                }
+                                fileComposition.get(departmentId).count += marker.options.employeeCount;
+                            }
                         }
                     });
                     
@@ -1045,10 +1080,63 @@
                         iconSize = 85; 
                     }
                     
+                    // Create custom styling based on file composition
+                    let backgroundStyle = '';
+                    let borderStyle = '3px solid rgba(255, 255, 255, 0.8)';
+                    
+                    if (fileComposition.size === 1) {
+                        // Single file - use that file's color
+                        const fileData = Array.from(fileComposition.values())[0];
+                        backgroundStyle = fileData.color;
+                    } else if (fileComposition.size === 2) {
+                        // Two files - create a split design
+                        const colors = Array.from(fileComposition.values()).map(f => f.color);
+                        backgroundStyle = `linear-gradient(135deg, ${colors[0]} 50%, ${colors[1]} 50%)`;
+                    } else if (fileComposition.size > 2) {
+                        // Multiple files - create a multi-color gradient
+                        const colors = Array.from(fileComposition.values()).map(f => f.color);
+                        const step = 100 / colors.length;
+                        const gradientStops = colors.map((color, index) => 
+                            `${color} ${index * step}%, ${color} ${(index + 1) * step}%`
+                        ).join(', ');
+                        backgroundStyle = `linear-gradient(135deg, ${gradientStops})`;
+                        borderStyle = '4px solid rgba(255, 255, 255, 0.9)'; // Thicker border for multi-file
+                    } else {
+                        // Fallback to default
+                        backgroundStyle = 'linear-gradient(135deg, #667eea, #764ba2)';
+                    }
+                    
+                    // Create tooltip showing file breakdown
+                    const tooltipContent = Array.from(fileComposition.entries())
+                        .map(([fileId, data]) => `${data.name}: ${data.count.toLocaleString()}`)
+                        .join('\\n');
+                    
+                    const html = `
+                        <div style="
+                            background: ${backgroundStyle}; 
+                            width: ${iconSize}px; 
+                            height: ${iconSize}px; 
+                            border-radius: 50%; 
+                            border: ${borderStyle};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: ${className.includes('small') ? '11px' : className.includes('medium') ? '13px' : className.includes('large') ? '15px' : '17px'};
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                            position: relative;
+                        " title="${tooltipContent}">
+                            ${totalEmployees.toLocaleString()}
+                            ${fileComposition.size > 1 ? `<div style="position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: white; border-radius: 50%; color: #333; font-size: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold;">${fileComposition.size}</div>` : ''}
+                        </div>
+                    `;
+                    
                     return new L.DivIcon({
-                        html: '<div><span>' + totalEmployees.toLocaleString() + '</span></div>',
-                        className: 'marker-cluster ' + className,
-                        iconSize: new L.Point(iconSize, iconSize)
+                        html: html,
+                        className: 'marker-cluster-custom',
+                        iconSize: new L.Point(iconSize + 4, iconSize + 4), // Slightly larger to accommodate multi-file indicator
+                        iconAnchor: new L.Point((iconSize + 4) / 2, (iconSize + 4) / 2)
                     });
                 }
             });
@@ -1636,7 +1724,8 @@
             // Create marker with employee count stored for clustering
             const marker = L.marker(coords, { 
                 icon: customIcon,
-                employeeCount: deptData.totalCount // Store employee count for clustering
+                employeeCount: deptData.totalCount, // Store employee count for clustering
+                fileId: fileIds.size === 1 ? fileIds.values().next().value : null // Store single file ID if applicable
             });
             
             // Add popup with department information
