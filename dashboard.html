@@ -566,6 +566,137 @@
             50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
+
+        /* File Management Styles */
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .file-color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-details {
+            display: flex;
+            flex-direction: column;
+            color: white;
+        }
+
+        .file-name {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .file-stats {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .file-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .file-toggle {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-toggle:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-toggle.hidden {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .file-remove {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-remove:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Legend */
+        .map-legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -576,14 +707,28 @@
         <div class="glass-panel" id="uploadSection">
             <div class="upload-area" id="uploadArea">
                 <span class="upload-icon">📂</span>
-                <div class="upload-text">Glissez-déposez votre fichier CSV ici</div>
+                <div class="upload-text">Glissez-déposez vos fichiers CSV ici</div>
                 <div class="upload-text">ou</div>
                 <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                    📂 Choisir un fichier CSV
+                    📂 Choisir un/des fichier(s) CSV
                 </button>
-                <input type="file" id="fileInput" accept=".csv" />
+                <input type="file" id="fileInput" accept=".csv" multiple />
             </div>
             <div id="messageContainer"></div>
+        </div>
+
+        <!-- File Management Section (hidden initially) -->
+        <div class="glass-panel" id="fileManagementSection" style="display: none;">
+            <h2 style="color: white; margin-bottom: 20px; text-align: center;">📁 Fichiers Chargés</h2>
+            <div id="loadedFilesList"></div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    ➕ Ajouter un autre fichier
+                </button>
+                <button class="upload-btn" onclick="clearAllFiles()" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                    🗑️ Supprimer tous
+                </button>
+            </div>
         </div>
 
         <!-- Dashboard Section -->
@@ -653,6 +798,10 @@
                 </div>
                 <div class="map-container">
                     <div id="map"></div>
+                    <div class="map-legend" id="mapLegend" style="display: none;">
+                        <div class="legend-title">📊 Fichiers Actifs</div>
+                        <div id="legendItems"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -768,16 +917,34 @@
         };
 
         // Initialize global variables
-        let postalData = [];
+        let allFilesData = new Map(); // Map of fileId -> file data
+        let fileSettings = new Map(); // Map of fileId -> {name, color, visible, etc.}
+        let fileIdCounter = 0;
+        let postalData = []; // Combined data from all visible files
         let filteredData = [];
         let map = null;
         let markersCluster = null;
+        let fileLayers = new Map(); // Map of fileId -> marker layer
         let markers = new Map();
         let highlightedMarker = null;
         let communesLayer = null;
         let isLoadingCommunes = false;
         let userViewPreference = 'postal'; // 'department' or 'postal'
         let postalCodeDatabase = new Map(); // Cache for geocoded postal codes
+
+        // Predefined colors for different files
+        const fileColors = [
+            '#667eea', // Primary blue
+            '#e74c3c', // Red
+            '#27ae60', // Green
+            '#f39c12', // Orange
+            '#9b59b6', // Purple
+            '#34495e', // Dark gray
+            '#e67e22', // Dark orange
+            '#1abc9c', // Turquoise
+            '#fd79a8', // Pink
+            '#00b894'  // Emerald
+        ];
 
         // Simple CSV parser to replace PapaParse
         function parseCSV(csvText) {
@@ -925,15 +1092,17 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
+            const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
-                handleFile(files[0]);
+                files.forEach(file => handleFile(file));
             }
         });
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
+                Array.from(e.target.files).forEach(file => handleFile(file));
+                // Reset the input so the same file can be selected again
+                e.target.value = '';
             }
         });
 
@@ -946,11 +1115,15 @@
 
         function handleFile(file) {
             if (!file.name.toLowerCase().endsWith('.csv')) {
-                showMessage('❌ Veuillez sélectionner un fichier CSV valide.');
+                showMessage('❌ Veuillez sélectionner un fichier CSV valide.', 'error');
                 return;
             }
 
-            showMessage('📊 Analyse du fichier en cours...', 'success');
+            const fileId = fileIdCounter++;
+            const fileName = file.name;
+            const fileColor = fileColors[fileId % fileColors.length];
+            
+            showMessage(`📊 Analyse du fichier "${fileName}" en cours...`, 'success');
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -958,21 +1131,21 @@
                 const results = parseCSV(csvText);
                 
                 if (results.errors.length > 0) {
-                    showMessage('❌ Erreur lors de l\'analyse du fichier CSV: ' + results.errors[0]);
+                    showMessage(`❌ Erreur lors de l'analyse du fichier "${fileName}": ` + results.errors[0], 'error');
                     return;
                 }
                 
-                processCSVData(results.data);
+                processCSVDataForFile(results.data, fileId, fileName, fileColor);
             };
             
             reader.onerror = function() {
-                showMessage('❌ Erreur lors de la lecture du fichier.');
+                showMessage(`❌ Erreur lors de la lecture du fichier "${fileName}".`, 'error');
             };
             
             reader.readAsText(file);
         }
 
-        function processCSVData(data) {
+        function processCSVDataForFile(data, fileId, fileName, fileColor) {
             // Detect column names
             const headers = Object.keys(data[0] || {});
             
@@ -998,16 +1171,17 @@
             }
 
             if (!postalCodeCol || !countCol) {
-                showMessage('❌ Colonnes requises non trouvées. Vérifiez que votre CSV contient les colonnes de codes postaux et de comptage.');
+                showMessage(`❌ Colonnes requises non trouvées dans "${fileName}". Vérifiez que votre CSV contient les colonnes de codes postaux et de comptage.`, 'error');
                 return;
             }
 
             // Process and validate data
-            postalData = data.map(row => ({
+            const fileData = data.map(row => ({
                 postalCode: row[postalCodeCol],
                 commune: communeCol ? row[communeCol] : null,
                 count: parseInt(row[countCol]) || 0,
-                department: row[postalCodeCol] ? row[postalCodeCol].substring(0, 2) : ''
+                department: row[postalCodeCol] ? row[postalCodeCol].substring(0, 2) : '',
+                fileId: fileId
             })).filter(item => {
                 return item.postalCode && 
                        item.postalCode.length === 5 && 
@@ -1015,30 +1189,184 @@
                        item.count > 0;
             });
 
-            if (postalData.length === 0) {
-                showMessage('❌ Aucune donnée valide trouvée. Vérifiez le format de vos codes postaux.');
+            if (fileData.length === 0) {
+                showMessage(`❌ Aucune donnée valide trouvée dans "${fileName}". Vérifiez le format de vos codes postaux.`, 'error');
                 return;
             }
 
-            filteredData = [...postalData];
-            const communeCount = postalData.filter(item => item.commune).length;
+            // Store file data
+            allFilesData.set(fileId, fileData);
+            fileSettings.set(fileId, {
+                name: fileName,
+                color: fileColor,
+                visible: true,
+                totalCodes: fileData.length,
+                totalEmployees: fileData.reduce((sum, item) => sum + item.count, 0)
+            });
+
+            const communeCount = fileData.filter(item => item.commune).length;
             const communeMsg = communeCol ? ` (${communeCount} avec communes)` : '';
-            showMessage(`✅ ${postalData.length} codes postaux chargés avec succès${communeMsg}!`, 'success');
+            showMessage(`✅ "${fileName}": ${fileData.length} codes postaux chargés${communeMsg}!`, 'success');
             
-            // Show dashboard
-            document.getElementById('uploadSection').style.display = 'none';
-            document.getElementById('dashboard').classList.add('active');
+            // Update UI
+            updateFileManagementDisplay();
+            updateCombinedData();
             
-            // Fix map loading issue by invalidating size after dashboard becomes visible
-            setTimeout(() => {
-                if (map) {
-                    map.invalidateSize();
-                }
+            // Show dashboard if first file
+            if (allFilesData.size === 1) {
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('fileManagementSection').style.display = 'block';
+                document.getElementById('dashboard').classList.add('active');
+                
+                // Fix map loading issue by invalidating size after dashboard becomes visible
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize();
+                    }
+                    updateDashboard();
+                }, 100);
+            } else {
                 updateDashboard();
-            }, 100);
+            }
+        }
+
+        function updateFileManagementDisplay() {
+            const container = document.getElementById('loadedFilesList');
+            container.innerHTML = '';
+
+            allFilesData.forEach((data, fileId) => {
+                const settings = fileSettings.get(fileId);
+                if (!settings) return;
+
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <div class="file-color-indicator" style="background: ${settings.color};"></div>
+                        <div class="file-details">
+                            <div class="file-name">${settings.name}</div>
+                            <div class="file-stats">${settings.totalCodes} codes • ${settings.totalEmployees.toLocaleString()} employés</div>
+                        </div>
+                    </div>
+                    <div class="file-controls">
+                        <button class="file-toggle ${settings.visible ? '' : 'hidden'}" onclick="toggleFileVisibility(${fileId})">
+                            ${settings.visible ? '👁️ Visible' : '🚫 Masqué'}
+                        </button>
+                        <button class="file-remove" onclick="removeFile(${fileId})">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+                container.appendChild(fileItem);
+            });
+
+            updateMapLegend();
+        }
+
+        function updateMapLegend() {
+            const legend = document.getElementById('mapLegend');
+            const legendItems = document.getElementById('legendItems');
+            
+            // Clear existing items
+            legendItems.innerHTML = '';
+            
+            // Count visible files
+            let visibleFiles = 0;
+            fileSettings.forEach((settings, fileId) => {
+                if (settings.visible) {
+                    visibleFiles++;
+                    const legendItem = document.createElement('div');
+                    legendItem.className = 'legend-item';
+                    legendItem.innerHTML = `
+                        <div class="legend-color" style="background: ${settings.color};"></div>
+                        <span>${settings.name} (${settings.totalCodes})</span>
+                    `;
+                    legendItems.appendChild(legendItem);
+                }
+            });
+            
+            // Show/hide legend based on visible files
+            legend.style.display = visibleFiles > 1 ? 'block' : 'none';
+        }
+
+        function toggleFileVisibility(fileId) {
+            const settings = fileSettings.get(fileId);
+            if (settings) {
+                settings.visible = !settings.visible;
+                updateFileManagementDisplay();
+                updateCombinedData();
+                updateDashboard();
+            }
+        }
+
+        function removeFile(fileId) {
+            allFilesData.delete(fileId);
+            fileSettings.delete(fileId);
+            
+            // Remove file's markers if they exist
+            if (fileLayers.has(fileId)) {
+                const layer = fileLayers.get(fileId);
+                if (markersCluster && markersCluster.hasLayer(layer)) {
+                    markersCluster.removeLayer(layer);
+                }
+                fileLayers.delete(fileId);
+            }
+            
+            updateFileManagementDisplay();
+            updateCombinedData();
+            
+            if (allFilesData.size === 0) {
+                // No files left, go back to upload view
+                document.getElementById('fileManagementSection').style.display = 'none';
+                document.getElementById('dashboard').classList.remove('active');
+                document.getElementById('uploadSection').style.display = 'block';
+                // Clear the map
+                if (markersCluster) {
+                    markersCluster.clearLayers();
+                }
+                markers.clear();
+                fileLayers.clear();
+            } else {
+                updateDashboard();
+            }
+        }
+
+        function clearAllFiles() {
+            allFilesData.clear();
+            fileSettings.clear();
+            fileLayers.clear();
+            
+            // Clear the map
+            if (markersCluster) {
+                markersCluster.clearLayers();
+            }
+            markers.clear();
+            
+            // Go back to upload view
+            document.getElementById('fileManagementSection').style.display = 'none';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('uploadSection').style.display = 'block';
+        }
+
+        function updateCombinedData() {
+            // Combine data from all visible files
+            postalData = [];
+            allFilesData.forEach((data, fileId) => {
+                const settings = fileSettings.get(fileId);
+                if (settings && settings.visible) {
+                    postalData.push(...data);
+                }
+            });
+            
+            filteredData = [...postalData];
         }
 
         function updateDashboard() {
+            updateStatistics();
+            updateTopCodes();
+            updateBarChart();
+            updateMap();
+        }
             updateStatistics();
             updateTopCodes();
             updateBarChart();
@@ -1122,11 +1450,13 @@
                     departmentData[item.department] = {
                         department: item.department,
                         totalCount: 0,
-                        postalCodes: []
+                        postalCodes: [],
+                        items: []
                     };
                 }
                 departmentData[item.department].totalCount += item.count;
                 departmentData[item.department].postalCodes.push(item.postalCode);
+                departmentData[item.department].items.push(item);
             });
 
             // Calculate intensity scale for departments
@@ -1269,10 +1599,23 @@
                 iconSize = [85, 85]; // Same as marker-cluster-xlarge
             }
 
-            // Create department marker with SAME styling as clusters
+            // For department markers, use primary color or blend multiple file colors if mixed data
+            let markerColor = '#667eea'; // Default color
+            
+            // If all data in this department comes from one file, use that file's color
+            const fileIds = new Set(deptData.items.map(item => item.fileId));
+            if (fileIds.size === 1) {
+                const fileId = fileIds.values().next().value;
+                const settings = fileSettings.get(fileId);
+                if (settings) {
+                    markerColor = settings.color;
+                }
+            }
+
+            // Create department marker with file-specific color or default
             const markerHtml = `
                 <div class="department-marker marker-${markerSize}" style="
-                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    background: ${markerColor};
                     border: 3px solid rgba(255, 255, 255, 0.8);
                     width: ${iconSize[0]}px;
                     height: ${iconSize[1]}px;
@@ -1296,6 +1639,23 @@
             });
             
             // Add popup with department information
+            const fileBreakdown = [];
+            const fileCounts = new Map();
+            
+            deptData.items.forEach(item => {
+                const fileId = item.fileId;
+                if (!fileCounts.has(fileId)) {
+                    fileCounts.set(fileId, { count: 0, settings: fileSettings.get(fileId) });
+                }
+                fileCounts.get(fileId).count += item.count;
+            });
+            
+            fileCounts.forEach((data, fileId) => {
+                if (data.settings) {
+                    fileBreakdown.push(`<span style="color: ${data.settings.color};">📁 ${data.settings.name}: ${data.count.toLocaleString()}</span>`);
+                }
+            });
+            
             marker.bindPopup(`
                 <div style="text-align: center;">
                     <strong>Département: ${deptData.department}</strong><br>
@@ -1304,6 +1664,7 @@
                     <div style="font-size: 0.9em; margin-top: 5px;">
                         ${deptData.postalCodes.slice(0, 5).join(', ')}${deptData.postalCodes.length > 5 ? '...' : ''}
                     </div>
+                    ${fileBreakdown.length > 1 ? '<div style="margin-top: 8px; font-size: 0.85em;">' + fileBreakdown.join('<br>') + '</div>' : ''}
                 </div>
             `);
 
@@ -1315,6 +1676,10 @@
         }
 
         function addMarkerToMap(item, coords, maxCount, minCount, commune = null) {
+            // Get the file color
+            const settings = fileSettings.get(item.fileId);
+            const markerColor = settings ? settings.color : '#667eea';
+            
             // Calculate marker size and color based on employee count using same logic as clusters
             const intensity = (item.count - minCount) / (maxCount - minCount);
             
@@ -1347,11 +1712,11 @@
                 labelPadding = '6px 10px';
             }
 
-            // Use SAME background gradient as clusters
+            // Use file-specific color instead of the default gradient
             const markerHtml = `
                 <div style="position: relative; text-align: center;">
                     <div style="
-                        background: linear-gradient(135deg, #667eea, #764ba2); 
+                        background: ${markerColor}; 
                         width: ${iconSize[0]}px; 
                         height: ${iconSize[1]}px; 
                         border-radius: 50%; 
@@ -1391,22 +1756,26 @@
             // Create marker with employee count stored for clustering
             const marker = L.marker(coords, { 
                 icon: customIcon,
-                employeeCount: item.count // Store employee count for clustering
+                employeeCount: item.count, // Store employee count for clustering
+                fileId: item.fileId // Store file ID for identification
             });
             
-            // Add popup with postal code information
+            // Add popup with postal code information including file name
             const popupContent = `
                 <div style="text-align: center;">
                     <strong>Code Postal: ${item.postalCode}</strong><br>
                     <strong>Département: ${item.department}</strong><br>
                     ${commune ? `<strong>Commune: ${commune}</strong><br>` : ''}
-                    <strong>Employés: ${item.count.toLocaleString()}</strong>
+                    <strong>Employés: ${item.count.toLocaleString()}</strong><br>
+                    <div style="color: ${markerColor}; font-weight: bold; margin-top: 5px;">
+                        📁 ${settings ? settings.name : 'Fichier inconnu'}
+                    </div>
                 </div>
             `;
             marker.bindPopup(popupContent);
 
             // Store marker reference
-            markers.set(item.postalCode, marker);
+            markers.set(item.postalCode + '_' + item.fileId, marker);
             
             // Add to cluster group
             markersCluster.addLayer(marker);
@@ -1618,21 +1987,29 @@
                 highlightedMarker = null;
             }
 
+            // Find the first marker with this postal code (from any file)
+            let foundMarker = null;
+            for (let [key, marker] of markers) {
+                if (key.startsWith(postalCode + '_')) {
+                    foundMarker = marker;
+                    break;
+                }
+            }
+
             // Highlight the new marker
-            const marker = markers.get(postalCode);
-            if (marker) {
-                const markerElement = marker._icon;
+            if (foundMarker) {
+                const markerElement = foundMarker._icon;
                 if (markerElement) {
                     const markerDiv = markerElement.querySelector('.custom-marker');
                     if (markerDiv) {
                         markerDiv.classList.add('marker-highlighted');
-                        highlightedMarker = marker;
+                        highlightedMarker = foundMarker;
                         
                         // Center map on the highlighted marker
-                        map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
+                        map.setView(foundMarker.getLatLng(), Math.max(map.getZoom(), 10));
                         
                         // Open popup
-                        marker.openPopup();
+                        foundMarker.openPopup();
                     }
                 }
             }
@@ -1643,7 +2020,7 @@
             const searchTerm = e.target.value.toLowerCase();
             
             if (searchTerm === '') {
-                filteredData = [...postalData];
+                updateCombinedData();
             } else {
                 filteredData = postalData.filter(item => 
                     item.postalCode.toLowerCase().includes(searchTerm)
